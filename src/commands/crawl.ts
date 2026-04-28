@@ -1,6 +1,7 @@
 import { Option } from "commander";
 import type { Command } from "commander";
 
+import { formatBrowserRunInfo } from "../core/browser.js";
 import { crawlSite } from "../core/crawler.js";
 import { saveCrawlArtifacts } from "../core/storage.js";
 import { logger } from "../lib/logger.js";
@@ -8,11 +9,13 @@ import {
   addBrowserOptions,
   addStorageOptions,
   parsePositiveInteger,
+  resolveStorageOptions,
   toBrowserLaunchOptions
 } from "./common.js";
 
 type CrawlCommandOptions = {
   chrome?: string;
+  config?: string;
   delayMs: number;
   depth: number;
   engine?: "chrome" | "lightpanda";
@@ -21,7 +24,7 @@ type CrawlCommandOptions = {
   lightpandaPort: number;
   maxPages: number;
   mode: "auto" | "sitemap" | "links";
-  outputDir: string;
+  outputDir?: string;
   store: boolean;
   timeoutMs: number;
   userAgent?: string;
@@ -46,6 +49,7 @@ export function registerCrawlCommand(program: Command) {
 
   command.action(async (url: string, options: CrawlCommandOptions) => {
     const browserOptions = toBrowserLaunchOptions(options);
+    const storage = await resolveStorageOptions(options);
     const result = await crawlSite(url, {
       browser: browserOptions,
       maxDepth: options.depth,
@@ -54,14 +58,15 @@ export function registerCrawlCommand(program: Command) {
       timeoutMs: browserOptions.timeoutMs
     });
 
-    const savedFiles = options.store ? await saveCrawlArtifacts(options.outputDir, result) : [];
+    const savedFiles = options.store ? await saveCrawlArtifacts(storage.path, result) : [];
 
     if (options.json) {
       process.stdout.write(
         `${JSON.stringify(
           {
             crawl: result,
-            savedFiles
+            savedFiles,
+            storage
           },
           null,
           2
@@ -71,6 +76,7 @@ export function registerCrawlCommand(program: Command) {
     }
 
     logger.success(`Crawled ${result.pages.length} page(s) using ${result.strategy}.`);
+    console.log(`Browser: ${formatBrowserRunInfo(result.browser)}`);
     console.log(`Root: ${result.rootUrl}`);
     console.log(`Sitemap URLs discovered: ${result.sitemapUrls.length}`);
     result.pages.slice(0, 10).forEach((page, index) => {

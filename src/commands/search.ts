@@ -1,20 +1,28 @@
 import { Option } from "commander";
 import type { Command } from "commander";
 
+import { formatBrowserRunInfo } from "../core/browser.js";
 import type { SearchProvider } from "../core/search.js";
 import { searchWeb } from "../core/search.js";
 import { saveSearchArtifacts } from "../core/storage.js";
 import { logger } from "../lib/logger.js";
-import { addBrowserOptions, addStorageOptions, parsePositiveInteger, toBrowserLaunchOptions } from "./common.js";
+import {
+  addBrowserOptions,
+  addStorageOptions,
+  parsePositiveInteger,
+  resolveStorageOptions,
+  toBrowserLaunchOptions
+} from "./common.js";
 
 type SearchCommandOptions = {
   chrome?: string;
+  config?: string;
   delayMs: number;
   engine?: "chrome" | "lightpanda";
   headed?: boolean;
   json?: boolean;
   lightpandaPort: number;
-  outputDir: string;
+  outputDir?: string;
   provider: SearchProvider;
   results: number;
   store: boolean;
@@ -40,26 +48,30 @@ export function registerSearchCommand(program: Command) {
 
   command.action(async (query: string, options: SearchCommandOptions) => {
     const browserOptions = toBrowserLaunchOptions(options);
-    const results = await searchWeb(browserOptions, query, {
+    const storage = await resolveStorageOptions(options);
+    const response = await searchWeb(browserOptions, query, {
       delayMs: browserOptions.delayMs,
       maxResults: options.results,
       provider: options.provider,
       timeoutMs: browserOptions.timeoutMs
     });
+    const { browser, results } = response;
 
     const savedFiles = options.store
-      ? await saveSearchArtifacts(options.outputDir, query, options.provider, results)
+      ? await saveSearchArtifacts(storage.path, query, options.provider, results, browser)
       : [];
 
     if (options.json) {
       process.stdout.write(
         `${JSON.stringify(
           {
+            browser,
             count: results.length,
             provider: options.provider,
             query,
             results,
-            savedFiles
+            savedFiles,
+            storage
           },
           null,
           2
@@ -68,7 +80,9 @@ export function registerSearchCommand(program: Command) {
       return;
     }
 
-    logger.success(`Found ${results.length} result(s) for "${query}" using ${options.provider}.`);
+    logger.success(
+      `Found ${results.length} result(s) for "${query}" using ${options.provider} via ${formatBrowserRunInfo(browser)}.`
+    );
     results.forEach((result, index) => {
       console.log(`${index + 1}. ${result.title}`);
       console.log(`   ${result.link}`);

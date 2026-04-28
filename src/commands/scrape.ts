@@ -1,20 +1,28 @@
 import type { Command } from "commander";
 
 import type { NavigationWaitUntil } from "../core/browser.js";
+import { formatBrowserRunInfo } from "../core/browser.js";
 import { fetchPageSnapshotWithEngine } from "../core/fetcher.js";
 import { buildScrapeResult } from "../core/parser.js";
 import { saveScrapeArtifacts } from "../core/storage.js";
 import { logger } from "../lib/logger.js";
-import { addBrowserOptions, addStorageOptions, addWaitUntilOption, toBrowserLaunchOptions } from "./common.js";
+import {
+  addBrowserOptions,
+  addStorageOptions,
+  addWaitUntilOption,
+  resolveStorageOptions,
+  toBrowserLaunchOptions
+} from "./common.js";
 
 type ScrapeCommandOptions = {
   chrome?: string;
+  config?: string;
   delayMs: number;
   engine?: "chrome" | "lightpanda";
   headed?: boolean;
   json?: boolean;
   lightpandaPort: number;
-  outputDir: string;
+  outputDir?: string;
   stdout?: boolean;
   store: boolean;
   timeoutMs: number;
@@ -36,11 +44,12 @@ export function registerScrapeCommand(program: Command) {
 
   command.action(async (url: string, options: ScrapeCommandOptions) => {
     const browserOptions = toBrowserLaunchOptions(options);
+    const storage = await resolveStorageOptions(options);
     const snapshot = await fetchPageSnapshotWithEngine(browserOptions, url, {
       waitUntil: options.waitUntil
     });
     const scrape = await buildScrapeResult(snapshot);
-    const savedFiles = options.store ? await saveScrapeArtifacts(options.outputDir, scrape) : [];
+    const savedFiles = options.store ? await saveScrapeArtifacts(storage.path, scrape) : [];
 
     if (options.json) {
       process.stdout.write(
@@ -50,7 +59,8 @@ export function registerScrapeCommand(program: Command) {
             scrape: {
               ...scrape,
               markdownLength: scrape.markdown.length
-            }
+            },
+            storage
           },
           null,
           2
@@ -60,6 +70,7 @@ export function registerScrapeCommand(program: Command) {
     }
 
     logger.success(`Scraped ${scrape.finalUrl}`);
+    console.log(`Browser: ${formatBrowserRunInfo(scrape.browser)}`);
     console.log(`Title: ${scrape.title ?? "(none)"}`);
     console.log(`Description: ${scrape.description ?? "(none)"}`);
     console.log(`Word count: ${scrape.wordCount ?? "unknown"}`);

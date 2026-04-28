@@ -1,10 +1,11 @@
 import type { Command } from "commander";
-import path from "node:path";
 
 import { detectLightpandaAvailability, findChromeExecutable } from "../core/browser.js";
+import { resolveOutputDirectory } from "../core/config.js";
 import { logger } from "../lib/logger.js";
 
 type DoctorOptions = {
+  config?: string;
   json?: boolean;
 };
 
@@ -12,10 +13,12 @@ export function registerDoctorCommand(program: Command) {
   program
     .command("doctor")
     .description("Print local runtime and browser capability details")
+    .option("--config <path>", "Path to a webfn config JSON file")
     .option("--json", "Output machine-readable JSON")
     .action(async (options: DoctorOptions) => {
       const chromeExecutable = findChromeExecutable();
       const lightpandaAvailable = await detectLightpandaAvailability();
+      const storage = await resolveOutputDirectory(options.config ? { configPath: options.config } : {});
       const details = {
         cli: "webfn",
         node: process.version,
@@ -26,7 +29,7 @@ export function registerDoctorCommand(program: Command) {
         lightpandaAvailable,
         headlessDefaultEngine: "lightpanda",
         headedDefaultEngine: "chrome",
-        defaultOutputDir: path.resolve("data"),
+        storage,
         timestamp: new Date().toISOString()
       };
 
@@ -44,7 +47,10 @@ export function registerDoctorCommand(program: Command) {
       logger.info(`Lightpanda module: ${details.lightpandaAvailable ? "available" : "not installed"}`);
       logger.info(`Headless default: ${details.headlessDefaultEngine}`);
       logger.info(`Headed default: ${details.headedDefaultEngine}`);
-      logger.info(`Output dir: ${details.defaultOutputDir}`);
+      logger.info(`Output dir: ${details.storage.path} (${details.storage.source})`);
+      if (details.storage.configPath) {
+        logger.info(`Config: ${details.storage.configPath}`);
+      }
       logger.info(`Timestamp: ${details.timestamp}`);
     });
 }

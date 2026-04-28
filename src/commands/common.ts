@@ -2,14 +2,16 @@ import { InvalidArgumentError, Option } from "commander";
 import type { Command } from "commander";
 
 import type { BrowserEngineOption, BrowserLaunchOptions, NavigationWaitUntil } from "../core/browser.js";
+import { resolveOutputDirectory } from "../core/config.js";
 
 export type SharedCommandOptions = {
   chrome?: string;
+  config?: string;
   delayMs: number;
   engine?: BrowserEngineOption;
   headed?: boolean;
   lightpandaPort: number;
-  outputDir: string;
+  outputDir?: string;
   store: boolean;
   timeoutMs: number;
   userAgent?: string;
@@ -54,8 +56,23 @@ export function addBrowserOptions(command: Command) {
 
 export function addStorageOptions(command: Command) {
   return command
-    .option("-o, --output-dir <dir>", "Directory used for saved artifacts", "data")
+    .option("--config <path>", "Path to a webfn config JSON file")
+    .option("-o, --output-dir <dir>", "Directory used for saved artifacts")
     .option("--no-store", "Skip writing files and print only to stdout");
+}
+
+export async function resolveStorageOptions(options: SharedCommandOptions) {
+  const outputOptions: { configPath?: string; outputDir?: string } = {};
+
+  if (options.config) {
+    outputOptions.configPath = options.config;
+  }
+
+  if (options.outputDir) {
+    outputOptions.outputDir = options.outputDir;
+  }
+
+  return resolveOutputDirectory(outputOptions);
 }
 
 export function addWaitUntilOption(command: Command) {

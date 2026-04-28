@@ -1,13 +1,18 @@
 import { parseHTML } from "linkedom";
 import type { Page } from "puppeteer-core";
 
-import type { BrowserLaunchOptions } from "./browser.js";
+import type { BrowserLaunchOptions, BrowserRunInfo } from "./browser.js";
 import { gotoAndWait, withBrowserSession } from "./browser.js";
 import type { SearchResult } from "./types.js";
 import { compactText, sleep } from "../lib/text.js";
 import { canonicalizeUrl } from "../lib/url.js";
 
 export type SearchProvider = SearchResult["provider"];
+export type SearchWebResponse = {
+  browser: BrowserRunInfo;
+  results: SearchResult[];
+};
+
 const DUCKDUCKGO_HTML_ENDPOINT = "https://html.duckduckgo.com/html/";
 
 function buildSearchUrl(query: string, provider: SearchProvider) {
@@ -226,11 +231,11 @@ export async function searchWeb(
     provider: SearchProvider;
     timeoutMs: number;
   }
-){
+): Promise<SearchWebResponse> {
   const url = buildSearchUrl(query, options.provider);
 
   try {
-    return await withBrowserSession(browser, async ({ page }) => {
+    return await withBrowserSession(browser, async ({ page, runtime }) => {
       await gotoAndWait(page, url, {
         delayMs: options.delayMs,
         timeoutMs: options.timeoutMs,
@@ -242,11 +247,23 @@ export async function searchWeb(
       }
 
       const html = await page.content();
-      return extractResultsFromHtml(options.provider, html, options.maxResults);
+      return {
+        browser: runtime,
+        results: extractResultsFromHtml(options.provider, html, options.maxResults)
+      };
     });
   } catch (error: unknown) {
     if (browser.engine === undefined && browser.headless && isSearchChallengeError(error)) {
-      return searchWeb({ ...browser, engine: "chrome" }, query, options);
+      const response: SearchWebResponse = await searchWeb({ ...browser, engine: "chrome" }, query, options);
+
+      return {
+        ...response,
+        browser: {
+          ...response.browser,
+          fallbackFrom: "lightpanda",
+          requestedEngine: "default"
+        }
+      };
     }
 
     throw error;

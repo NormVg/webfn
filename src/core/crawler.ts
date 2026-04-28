@@ -4,7 +4,7 @@ import { canonicalizeUrl, isInternalUrl, isLikelyPageUrl } from "../lib/url.js";
 import { withBrowserSession } from "./browser.js";
 import { fetchPageSnapshot } from "./fetcher.js";
 import { fetchText } from "./http.js";
-import type { BrowserLaunchOptions } from "./browser.js";
+import type { BrowserLaunchOptions, BrowserRunInfo } from "./browser.js";
 import type { CrawlPage, CrawlResult, PageSnapshot } from "./types.js";
 
 type CrawlMode = "auto" | "links" | "sitemap";
@@ -223,7 +223,11 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
   const seen = new Set<string>();
   const queued = new Set(queue.map((item) => item.url));
   const pages: CrawlPage[] = [];
-  await withBrowserSession(options.browser, async ({ page }) => {
+  let browserRuntime: BrowserRunInfo | null = null;
+
+  await withBrowserSession(options.browser, async ({ page, runtime }) => {
+    browserRuntime = runtime;
+
     while (queue.length > 0 && pages.length < options.maxPages) {
       const next = queue.shift();
 
@@ -241,6 +245,7 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
 
       try {
         const snapshot = await fetchPageSnapshot(page, normalized, {
+          browser: runtime,
           delayMs: options.browser.delayMs,
           timeoutMs: options.timeoutMs,
           waitUntil: "domcontentloaded"
@@ -256,7 +261,12 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
     }
   });
 
+  if (!browserRuntime) {
+    throw new Error("Browser runtime was not resolved.");
+  }
+
   return {
+    browser: browserRuntime,
     finishedAt: new Date().toISOString(),
     maxDepth: options.maxDepth,
     maxPages: options.maxPages,

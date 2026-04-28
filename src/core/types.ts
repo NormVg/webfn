@@ -1,3 +1,5 @@
+import type { BrowserRunInfo } from "./browser.js";
+
 export type HeadingInfo = {
   level: number;
   text: string;
@@ -28,6 +30,7 @@ export type PageSummary = {
 };
 
 export type PageSnapshot = PageSummary & {
+  browser: BrowserRunInfo;
   fetchedAt: string;
   finalUrl: string;
   html: string;
@@ -37,6 +40,7 @@ export type PageSnapshot = PageSummary & {
 
 export type ScrapeResult = {
   author: string | null;
+  browser: BrowserRunInfo;
   description: string | null;
   finalUrl: string;
   headings: HeadingInfo[];
@@ -70,6 +74,7 @@ export type CrawlPage = {
 };
 
 export type CrawlResult = {
+  browser: BrowserRunInfo;
   finishedAt: string;
   maxDepth: number;
   maxPages: number;

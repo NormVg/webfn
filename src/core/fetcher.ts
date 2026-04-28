@@ -1,11 +1,12 @@
 import type { Page } from "puppeteer-core";
 
-import type { BrowserLaunchOptions, NavigationWaitUntil } from "./browser.js";
+import type { BrowserLaunchOptions, BrowserRunInfo, NavigationWaitUntil } from "./browser.js";
 import { gotoAndWait, responseStatus, withBrowserSession } from "./browser.js";
 import { parsePageDocument } from "./parser.js";
 import type { PageSnapshot } from "./types.js";
 
 function buildPageSnapshot(input: {
+  browser: BrowserRunInfo;
   fetchedAt?: string;
   finalUrl: string;
   html: string;
@@ -16,6 +17,7 @@ function buildPageSnapshot(input: {
 
   return {
     ...parsed,
+    browser: input.browser,
     fetchedAt: input.fetchedAt ?? new Date().toISOString(),
     finalUrl: input.finalUrl,
     html: input.html,
@@ -28,6 +30,7 @@ export async function fetchPageSnapshot(
   page: Page,
   url: string,
   options: {
+    browser: BrowserRunInfo;
     delayMs: number;
     timeoutMs: number;
     waitUntil: NavigationWaitUntil;
@@ -38,6 +41,7 @@ export async function fetchPageSnapshot(
   const finalUrl = page.url();
 
   return buildPageSnapshot({
+    browser: options.browser,
     finalUrl,
     html,
     requestedUrl: url,
@@ -52,8 +56,9 @@ export async function fetchPageSnapshotWithEngine(
     waitUntil: NavigationWaitUntil;
   }
 ): Promise<PageSnapshot> {
-  return withBrowserSession(browser, async ({ page }) =>
+  return withBrowserSession(browser, async ({ page, runtime }) =>
     fetchPageSnapshot(page, url, {
+      browser: runtime,
       delayMs: browser.delayMs,
       timeoutMs: browser.timeoutMs,
       waitUntil: options.waitUntil
@@ -63,6 +68,7 @@ export async function fetchPageSnapshotWithEngine(
 
 export function summarizePageSnapshot(snapshot: PageSnapshot) {
   return {
+    browser: snapshot.browser,
     description: snapshot.description,
     fetchedAt: snapshot.fetchedAt,
     finalUrl: snapshot.finalUrl,

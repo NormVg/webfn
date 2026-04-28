@@ -127,6 +127,7 @@ export async function buildScrapeResult(snapshot: PageSnapshot): Promise<ScrapeR
 
   return {
     author: emptyToNull(result.author),
+    browser: snapshot.browser,
     description: emptyToNull(result.description) ?? snapshot.description,
     finalUrl: snapshot.finalUrl,
     headings: snapshot.headings,

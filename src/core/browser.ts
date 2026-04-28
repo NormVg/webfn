@@ -14,6 +14,7 @@ export const DEFAULT_USER_AGENT =
 export type BrowserEngineOption = "chrome" | "lightpanda";
 export type ResolvedBrowserEngine = BrowserEngineOption;
 export type NavigationWaitUntil = "domcontentloaded" | "networkidle2";
+export type BrowserRunMode = "headed" | "headless";
 
 export type BrowserLaunchOptions = {
   delayMs: number;
@@ -31,6 +32,16 @@ export type BrowserSession = {
   engine: ResolvedBrowserEngine;
   executablePath?: string;
   page: Page;
+  runtime: BrowserRunInfo;
+};
+
+export type BrowserRunInfo = {
+  engine: ResolvedBrowserEngine;
+  headless: boolean;
+  mode: BrowserRunMode;
+  requestedEngine: BrowserEngineOption | "default";
+  executablePath?: string;
+  fallbackFrom?: BrowserEngineOption;
 };
 
 const CHROME_CANDIDATES = [
@@ -86,6 +97,30 @@ export async function resolveBrowserEngine(options: BrowserLaunchOptions): Promi
   }
 
   return "lightpanda";
+}
+
+function createBrowserRunInfo(
+  options: BrowserLaunchOptions,
+  engine: ResolvedBrowserEngine,
+  executablePath?: string
+): BrowserRunInfo {
+  const info: BrowserRunInfo = {
+    engine,
+    headless: options.headless,
+    mode: options.headless ? "headless" : "headed",
+    requestedEngine: options.engine ?? "default"
+  };
+
+  if (executablePath) {
+    info.executablePath = executablePath;
+  }
+
+  return info;
+}
+
+export function formatBrowserRunInfo(runtime: Pick<BrowserRunInfo, "engine" | "fallbackFrom" | "mode">) {
+  const fallbackFrom = runtime.fallbackFrom;
+  return fallbackFrom ? `${runtime.engine} (${runtime.mode}, fallback from ${fallbackFrom})` : `${runtime.engine} (${runtime.mode})`;
 }
 
 async function configurePage(page: Page, options: BrowserLaunchOptions) {
@@ -147,7 +182,8 @@ async function createChromeSession(options: BrowserLaunchOptions): Promise<Brows
     },
     engine: "chrome",
     executablePath,
-    page
+    page,
+    runtime: createBrowserRunInfo(options, "chrome", executablePath)
   };
 }
 
@@ -183,7 +219,8 @@ async function createLightpandaSession(options: BrowserLaunchOptions): Promise<B
       },
       engine: "lightpanda",
       executablePath,
-      page
+      page,
+      runtime: createBrowserRunInfo(options, "lightpanda", executablePath)
     };
   } catch (error: unknown) {
     await closePageContext(page, context);
