@@ -17,6 +17,7 @@ Running `webfn` with no arguments shows this banner, the root help, and a few qu
 - crawl sites from sitemaps or internal links
 - scrape readable markdown
 - store artifacts on disk
+- show live status and progress in interactive terminals
 
 ## Structure
 
@@ -26,6 +27,7 @@ Running `webfn` with no arguments shows this banner, the root help, and a few qu
 │   ├── cli.ts
 │   ├── commands
 │   │   ├── common.ts
+│   │   ├── collect.ts
 │   │   ├── crawl.ts
 │   │   ├── doctor.ts
 │   │   ├── fetch.ts
@@ -34,6 +36,7 @@ Running `webfn` with no arguments shows this banner, the root help, and a few qu
 │   │   └── search.ts
 │   ├── core
 │   │   ├── browser.ts
+│   │   ├── config.ts
 │   │   ├── crawler.ts
 │   │   ├── fetcher.ts
 │   │   ├── http.ts
@@ -44,6 +47,7 @@ Running `webfn` with no arguments shows this banner, the root help, and a few qu
 │   └── lib
 │       ├── logger.ts
 │       ├── text.ts
+│       ├── ui.ts
 │       └── url.ts
 ├── .gitignore
 ├── .npmrc
@@ -76,7 +80,7 @@ Useful dev equivalents:
 pnpm dev search "ai agents"
 pnpm dev collect "ai agents" --results 3
 pnpm dev fetch https://example.com
-pnpm dev crawl https://example.com --mode sitemap
+pnpm dev crawl https://example.com --mode sitemap --fetch-pages
 pnpm dev scrape https://example.com --json
 pnpm dev doctor --json
 ```
@@ -98,6 +102,7 @@ Examples:
 pnpm dev search "openai agents" --provider google
 pnpm dev search "openai agents" --provider duckduckgo
 pnpm dev collect "openai agents" --provider google --results 3
+pnpm dev crawl https://example.com --mode links --fetch-pages --max-pages 10
 pnpm dev fetch https://example.com --headed
 pnpm dev scrape https://example.com --engine chrome --stdout
 pnpm dev scrape https://example.com --markdown-engine turndown
@@ -114,10 +119,13 @@ Artifacts are written to the configured output directory. The built-in fallback 
       collect.json
       google.json
   example.com/
-    fetch-home-<hash>/
-      index.md
-    crawl-home-<hash>.json
-    scrape-home-<hash>.md
+    crawl/
+      home-<hash>.json
+    fetch/
+      home-<hash>/
+        index.md
+    scrape/
+      home-<hash>.md
 ```
 
 Use `--no-store` if you only want stdout output.
@@ -139,6 +147,13 @@ pnpm dev scrape https://example.com --save-json
 ```bash
 pnpm dev fetch https://example.com --markdown-engine defuddle
 pnpm dev scrape https://example.com --markdown-engine turndown
+```
+
+`crawl` can optionally save full fetched page artifacts for each crawled URL:
+
+```bash
+pnpm dev crawl https://example.com --fetch-pages
+pnpm dev crawl https://example.com --fetch-pages --save-html --save-json
 ```
 
 ## Configuration
@@ -197,6 +212,7 @@ pnpm dev fetch https://example.com --chrome /path/to/chrome
 - DuckDuckGo uses the HTML endpoint at `https://html.duckduckgo.com/html/`.
 - DuckDuckGo can still return anti-bot challenges.
 - `collect` saves the search result set, fetches each result page, and writes a collection report.
+- `crawl --fetch-pages` saves fetched page artifacts for every crawled page.
 - Sitemap crawling is attempted before internal-link crawling when `--mode auto`.
 - `fetch` stores Markdown by default and can optionally store metadata JSON and rendered HTML.
 - `scrape` stores Markdown by default and can optionally store metadata JSON.

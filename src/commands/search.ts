@@ -5,8 +5,7 @@ import { formatBrowserRunInfo } from "../core/browser.js";
 import type { SearchProvider } from "../core/search.js";
 import { searchWeb } from "../core/search.js";
 import { saveSearchArtifacts } from "../core/storage.js";
-import { logger } from "../lib/logger.js";
-import { printMetric, printSavedFiles, printSection } from "../lib/ui.js";
+import { printMetric, printSavedFiles, printSection, startSpinner } from "../lib/ui.js";
 import {
   addBrowserOptions,
   addStorageOptions,
@@ -48,6 +47,9 @@ export function registerSearchCommand(program: Command) {
   addStorageOptions(command);
 
   command.action(async (query: string, options: SearchCommandOptions) => {
+    const spinner = startSpinner(`Searching ${options.provider} for "${query}"`);
+
+    try {
     const browserOptions = toBrowserLaunchOptions(options);
     const storage = await resolveStorageOptions(options);
     const response = await searchWeb(browserOptions, query, {
@@ -61,6 +63,7 @@ export function registerSearchCommand(program: Command) {
     const savedFiles = options.store
       ? await saveSearchArtifacts(storage.path, query, options.provider, results, browser)
       : [];
+    spinner.succeed(`Search complete: ${results.length} result(s)`);
 
     if (options.json) {
       process.stdout.write(
@@ -81,9 +84,6 @@ export function registerSearchCommand(program: Command) {
       return;
     }
 
-    logger.success(
-      `Found ${results.length} result(s) for "${query}" using ${options.provider} via ${formatBrowserRunInfo(browser)}.`
-    );
     printSection(`Search: ${query}`);
     printMetric("Provider", options.provider);
     printMetric("Browser", formatBrowserRunInfo(browser));
@@ -98,5 +98,9 @@ export function registerSearchCommand(program: Command) {
     });
 
     printSavedFiles(savedFiles);
+    } catch (error: unknown) {
+      spinner.fail(`Search failed: ${query}`);
+      throw error;
+    }
   });
 }

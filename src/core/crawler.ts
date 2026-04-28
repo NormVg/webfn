@@ -4,7 +4,7 @@ import { canonicalizeUrl, isInternalUrl, isLikelyPageUrl } from "../lib/url.js";
 import { withBrowserSession } from "./browser.js";
 import { fetchPageSnapshot } from "./fetcher.js";
 import { fetchText } from "./http.js";
-import type { BrowserLaunchOptions, BrowserRunInfo } from "./browser.js";
+import type { BrowserLaunchOptions, BrowserRunInfo, NavigationWaitUntil } from "./browser.js";
 import type { CrawlPage, CrawlResult, PageSnapshot } from "./types.js";
 
 type CrawlMode = "auto" | "links" | "sitemap";
@@ -14,7 +14,11 @@ type CrawlOptions = {
   maxDepth: number;
   maxPages: number;
   mode: CrawlMode;
+  onPageError?: (input: { error: string; processed: number; queued: number; url: string }) => void;
+  onPageFetched?: (input: { processed: number; queued: number; snapshot: PageSnapshot }) => Promise<void> | void;
+  onStatus?: (message: string) => void;
   timeoutMs: number;
+  waitUntil: NavigationWaitUntil;
 };
 
 const xmlParser = new XMLParser({
@@ -203,6 +207,7 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
   }
 
   const startedAt = new Date().toISOString();
+  options.onStatus?.("Discovering sitemap URLs");
   const sitemapUrls = options.mode !== "links" ? await discoverSitemapUrls(normalizedRoot, options.timeoutMs) : [];
   const useSitemap = options.mode !== "links" && sitemapUrls.length > 0;
 
@@ -224,6 +229,7 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
   const queued = new Set(queue.map((item) => item.url));
   const pages: CrawlPage[] = [];
   let browserRuntime: BrowserRunInfo | null = null;
+  options.onStatus?.(useSitemap ? `Loaded ${sitemapUrls.length} sitemap URLs` : "Crawling internal links");
 
   await withBrowserSession(options.browser, async ({ page, runtime }) => {
     browserRuntime = runtime;
@@ -248,15 +254,26 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
           browser: runtime,
           delayMs: options.browser.delayMs,
           timeoutMs: options.timeoutMs,
-          waitUntil: "domcontentloaded"
+          waitUntil: options.waitUntil
         });
         pushCrawlPage(pages, next, snapshot);
+        await options.onPageFetched?.({
+          processed: pages.length,
+          queued: queue.length,
+          snapshot
+        });
 
         if (strategy === "links") {
           enqueueInternalLinks(queue, queued, seen, next, options.maxDepth, snapshot);
         }
       } catch (error: unknown) {
         pushCrawlError(pages, next, normalized, error);
+        options.onPageError?.({
+          error: error instanceof Error ? error.message : String(error),
+          processed: pages.length,
+          queued: queue.length,
+          url: normalized
+        });
       }
     }
   });

@@ -6,8 +6,7 @@ import { formatBrowserRunInfo } from "../core/browser.js";
 import { fetchPageSnapshotWithEngine } from "../core/fetcher.js";
 import { buildScrapeResult } from "../core/parser.js";
 import { saveScrapeArtifacts } from "../core/storage.js";
-import { logger } from "../lib/logger.js";
-import { printMetric, printSavedFiles, printSection } from "../lib/ui.js";
+import { printMetric, printSavedFiles, printSection, startSpinner } from "../lib/ui.js";
 import { resolvePreferredUrl } from "../lib/url.js";
 import {
   addBrowserOptions,
@@ -51,6 +50,9 @@ export function registerScrapeCommand(program: Command) {
   addWaitUntilOption(command);
 
   command.action(async (url: string, options: ScrapeCommandOptions) => {
+    const spinner = startSpinner(`Scraping ${url}`);
+
+    try {
     const browserOptions = toBrowserLaunchOptions(options);
     const storage = await resolveStorageOptions(options);
     const snapshot = await fetchPageSnapshotWithEngine(browserOptions, url, {
@@ -65,6 +67,7 @@ export function registerScrapeCommand(program: Command) {
           saveJson: Boolean(options.saveJson)
         })
       : [];
+    spinner.succeed(`Scrape complete: ${displayUrl}`);
 
     if (options.json) {
       process.stdout.write(
@@ -84,7 +87,6 @@ export function registerScrapeCommand(program: Command) {
       return;
     }
 
-    logger.success(`Scraped ${displayUrl}`);
     printSection(scrape.title ?? "Scraped Page");
     printMetric("URL", displayUrl);
     printMetric("Browser", formatBrowserRunInfo(scrape.browser));
@@ -104,5 +106,9 @@ export function registerScrapeCommand(program: Command) {
     }
 
     printSavedFiles(savedFiles);
+    } catch (error: unknown) {
+      spinner.fail(`Scrape failed: ${url}`);
+      throw error;
+    }
   });
 }

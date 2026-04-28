@@ -4,6 +4,7 @@ import type { BrowserLaunchOptions, BrowserRunInfo, NavigationWaitUntil } from "
 import { gotoAndWait, responseStatus, withBrowserSession } from "./browser.js";
 import { parsePageDocument } from "./parser.js";
 import type { PageSnapshot } from "./types.js";
+import { resolvePreferredUrl } from "../lib/url.js";
 
 function buildPageSnapshot(input: {
   browser: BrowserRunInfo;
@@ -13,13 +14,14 @@ function buildPageSnapshot(input: {
   requestedUrl: string;
   status: number | null;
 }): PageSnapshot {
-  const parsed = parsePageDocument(input.html, input.finalUrl);
+  const resolvedFinalUrl = resolvePreferredUrl(input.finalUrl, input.requestedUrl);
+  const parsed = parsePageDocument(input.html, resolvedFinalUrl);
 
   return {
     ...parsed,
     browser: input.browser,
     fetchedAt: input.fetchedAt ?? new Date().toISOString(),
-    finalUrl: input.finalUrl,
+    finalUrl: resolvedFinalUrl,
     html: input.html,
     requestedUrl: input.requestedUrl,
     status: input.status

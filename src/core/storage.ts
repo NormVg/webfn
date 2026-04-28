@@ -37,12 +37,12 @@ async function writeText(filePath: string, data: string) {
 function getUrlArtifactBase(outputDir: string, url: string, fallbackUrl?: string) {
   const artifactUrl = resolvePreferredUrl(url, fallbackUrl);
   const parsed = new URL(artifactUrl);
-  const directory = path.resolve(outputDir, parsed.hostname);
+  const siteDirectory = path.resolve(outputDir, parsed.hostname);
   const pathSlug = slugify(parsed.pathname === "/" ? "home" : parsed.pathname);
   const unique = hashText(artifactUrl);
 
   return {
-    directory,
+    siteDirectory,
     name: `${pathSlug}-${unique}`
   };
 }
@@ -158,7 +158,7 @@ export async function saveFetchArtifacts(
   options: FetchArtifactOptions = {}
 ): Promise<SavedFile[]> {
   const base = getUrlArtifactBase(outputDir, snapshot.finalUrl, snapshot.requestedUrl);
-  const artifactDirectory = path.join(base.directory, `fetch-${base.name}`);
+  const artifactDirectory = path.join(base.siteDirectory, "fetch", base.name);
   const metadataPath = path.join(artifactDirectory, "metadata.json");
   const htmlPath = path.join(artifactDirectory, "page.html");
   const markdownPath = path.join(artifactDirectory, "index.md");
@@ -193,8 +193,9 @@ export async function saveScrapeArtifacts(
   options: ScrapeArtifactOptions = {}
 ): Promise<SavedFile[]> {
   const base = getUrlArtifactBase(outputDir, scrape.finalUrl, scrape.requestedUrl);
-  const metadataPath = path.join(base.directory, `scrape-${base.name}.json`);
-  const markdownPath = path.join(base.directory, `scrape-${base.name}.md`);
+  const scrapeDirectory = path.join(base.siteDirectory, "scrape");
+  const metadataPath = path.join(scrapeDirectory, `${base.name}.json`);
+  const markdownPath = path.join(scrapeDirectory, `${base.name}.md`);
   const { markdown, ...metadata } = scrape;
   const savedFiles: SavedFile[] = [];
 
@@ -214,7 +215,7 @@ export async function saveScrapeArtifacts(
 
 export async function saveCrawlArtifacts(outputDir: string, result: CrawlResult): Promise<SavedFile[]> {
   const base = getUrlArtifactBase(outputDir, result.rootUrl);
-  const filePath = path.join(base.directory, `crawl-${base.name}.json`);
+  const filePath = path.join(base.siteDirectory, "crawl", `${base.name}.json`);
   await writeJson(filePath, result);
 
   return [{ label: "crawl-report", path: filePath }];

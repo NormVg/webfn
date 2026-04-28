@@ -6,8 +6,7 @@ import { formatBrowserRunInfo } from "../core/browser.js";
 import { fetchPageSnapshotWithEngine, summarizePageSnapshot } from "../core/fetcher.js";
 import { buildScrapeResult } from "../core/parser.js";
 import { saveFetchArtifacts } from "../core/storage.js";
-import { logger } from "../lib/logger.js";
-import { printMetric, printSavedFiles, printSection } from "../lib/ui.js";
+import { printMetric, printSavedFiles, printSection, startSpinner } from "../lib/ui.js";
 import { resolvePreferredUrl } from "../lib/url.js";
 import {
   addBrowserOptions,
@@ -51,6 +50,9 @@ export function registerFetchCommand(program: Command) {
   addWaitUntilOption(command);
 
   command.action(async (url: string, options: FetchCommandOptions) => {
+    const spinner = startSpinner(`Fetching ${url}`);
+
+    try {
     const browserOptions = toBrowserLaunchOptions(options);
     const storage = await resolveStorageOptions(options);
     const snapshot = await fetchPageSnapshotWithEngine(browserOptions, url, {
@@ -67,6 +69,7 @@ export function registerFetchCommand(program: Command) {
           saveJson: Boolean(options.saveJson)
         })
       : [];
+    spinner.succeed(`Fetch complete: ${displayUrl}`);
 
     if (options.json) {
       process.stdout.write(
@@ -88,7 +91,6 @@ export function registerFetchCommand(program: Command) {
       return;
     }
 
-    logger.success(`Fetched ${displayUrl}`);
     printSection(summary.title ?? "Fetched Page");
     printMetric("URL", displayUrl);
     printMetric("Browser", formatBrowserRunInfo(snapshot.browser));
@@ -104,5 +106,9 @@ export function registerFetchCommand(program: Command) {
       console.log(`\n${chalk.dim(summary.description)}`);
     }
     printSavedFiles(savedFiles);
+    } catch (error: unknown) {
+      spinner.fail(`Fetch failed: ${url}`);
+      throw error;
+    }
   });
 }
