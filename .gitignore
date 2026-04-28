@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+dist
+.DS_Store
+.env
+.env.*
+data
+agent-data
+test.js
+.info2ai
