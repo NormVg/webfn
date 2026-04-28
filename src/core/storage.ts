@@ -127,6 +127,30 @@ export async function saveSearchArtifacts(
   return [{ label: "search-results", path: filePath }];
 }
 
+export async function saveCollectArtifacts(
+  outputDir: string,
+  payload: {
+    browser: BrowserRunInfo;
+    fetchedAt: string;
+    provider: SearchResult["provider"];
+    query: string;
+    results: Array<{
+      error: string | null;
+      finalUrl: string | null;
+      link: string;
+      savedFiles: SavedFile[];
+      status: number | null;
+      title: string;
+    }>;
+  }
+): Promise<SavedFile[]> {
+  const base = path.resolve(outputDir, "search", `${slugify(payload.query)}-${hashText(payload.query)}`);
+  const filePath = path.join(base, "collect.json");
+  await writeJson(filePath, payload);
+
+  return [{ label: "collect-report", path: filePath }];
+}
+
 export async function saveFetchArtifacts(
   outputDir: string,
   snapshot: PageSnapshot,

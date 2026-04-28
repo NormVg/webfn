@@ -63,6 +63,7 @@ Running `webfn` with no arguments shows this banner, the root help, and a few qu
 
 ```bash
 webfn search "ai agents"
+webfn collect "ai agents"
 webfn fetch https://example.com
 webfn crawl https://example.com --depth 2 --max-pages 50
 webfn scrape https://example.com --stdout
@@ -73,6 +74,7 @@ Useful dev equivalents:
 
 ```bash
 pnpm dev search "ai agents"
+pnpm dev collect "ai agents" --results 3
 pnpm dev fetch https://example.com
 pnpm dev crawl https://example.com --mode sitemap
 pnpm dev scrape https://example.com --json
@@ -95,6 +97,7 @@ Examples:
 ```bash
 pnpm dev search "openai agents" --provider google
 pnpm dev search "openai agents" --provider duckduckgo
+pnpm dev collect "openai agents" --provider google --results 3
 pnpm dev fetch https://example.com --headed
 pnpm dev scrape https://example.com --engine chrome --stdout
 pnpm dev scrape https://example.com --markdown-engine turndown
@@ -108,6 +111,7 @@ Artifacts are written to the configured output directory. The built-in fallback 
 <output-dir>/
   search/
     ai-agents-<hash>/
+      collect.json
       google.json
   example.com/
     fetch-home-<hash>/
@@ -192,6 +196,7 @@ pnpm dev fetch https://example.com --chrome /path/to/chrome
 - Google scraping is fragile and may hit consent screens, captchas, or layout changes.
 - DuckDuckGo uses the HTML endpoint at `https://html.duckduckgo.com/html/`.
 - DuckDuckGo can still return anti-bot challenges.
+- `collect` saves the search result set, fetches each result page, and writes a collection report.
 - Sitemap crawling is attempted before internal-link crawling when `--mode auto`.
 - `fetch` stores Markdown by default and can optionally store metadata JSON and rendered HTML.
 - `scrape` stores Markdown by default and can optionally store metadata JSON.
