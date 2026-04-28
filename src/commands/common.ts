@@ -2,6 +2,7 @@ import { InvalidArgumentError, Option } from "commander";
 import type { Command } from "commander";
 
 import type { BrowserEngineOption, BrowserLaunchOptions, NavigationWaitUntil } from "../core/browser.js";
+import type { MarkdownEngine } from "../core/types.js";
 import { resolveOutputDirectory } from "../core/config.js";
 
 export type SharedCommandOptions = {
@@ -80,6 +81,14 @@ export function addWaitUntilOption(command: Command) {
     new Option("--wait-until <mode>", "Navigation wait mode")
       .choices(["domcontentloaded", "networkidle2"] satisfies NavigationWaitUntil[])
       .default("networkidle2")
+  );
+}
+
+export function addMarkdownEngineOption(command: Command) {
+  return command.addOption(
+    new Option("--markdown-engine <engine>", "Markdown extraction engine")
+      .choices(["defuddle", "turndown"] satisfies MarkdownEngine[])
+      .default("defuddle")
   );
 }
 

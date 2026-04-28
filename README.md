@@ -1,6 +1,16 @@
 # webfn
 
-`webfn` is a `pnpm`-managed CLI for agent-style internet access workflows:
+```
+ __     __     ______     ______     ______   __   __
+/\ \  _ \ \   /\  ___\   /\  == \   /\  ___\ /\ "-.\ \
+\ \ \/ ".\ \  \ \  __\   \ \  __<   \ \  __\ \ \ \-.  \
+ \ \__/".~\_\  \ \_____\  \ \_____\  \ \_\    \ \_\\"\_\
+  \/_/   \/_/   \/_____/   \/_____/   \/_/     \/_/ \/_/
+```
+
+Agent-oriented CLI for browser-backed search, fetch, crawl, and scrape workflows.
+
+Running `webfn` with no arguments shows this banner, the root help, and a few quick examples.
 
 - search the web
 - fetch rendered pages
@@ -87,6 +97,7 @@ pnpm dev search "openai agents" --provider google
 pnpm dev search "openai agents" --provider duckduckgo
 pnpm dev fetch https://example.com --headed
 pnpm dev scrape https://example.com --engine chrome --stdout
+pnpm dev scrape https://example.com --markdown-engine turndown
 ```
 
 ## Output Layout
@@ -102,7 +113,6 @@ Artifacts are written to the configured output directory. The built-in fallback 
     fetch-home-<hash>/
       index.md
     crawl-home-<hash>.json
-    scrape-home-<hash>.json
     scrape-home-<hash>.md
 ```
 
@@ -112,6 +122,19 @@ Use `--no-store` if you only want stdout output.
 
 ```bash
 pnpm dev fetch https://example.com --save-html --save-json
+```
+
+`scrape` also saves only Markdown by default. Use `--save-json` when you also want the structured scrape JSON file:
+
+```bash
+pnpm dev scrape https://example.com --save-json
+```
+
+`fetch` and `scrape` support both markdown engines:
+
+```bash
+pnpm dev fetch https://example.com --markdown-engine defuddle
+pnpm dev scrape https://example.com --markdown-engine turndown
 ```
 
 ## Configuration
@@ -171,3 +194,5 @@ pnpm dev fetch https://example.com --chrome /path/to/chrome
 - DuckDuckGo can still return anti-bot challenges.
 - Sitemap crawling is attempted before internal-link crawling when `--mode auto`.
 - `fetch` stores Markdown by default and can optionally store metadata JSON and rendered HTML.
+- `scrape` stores Markdown by default and can optionally store metadata JSON.
+- `defuddle` is the default markdown engine; `turndown` is available as an alternative for `fetch` and `scrape`.

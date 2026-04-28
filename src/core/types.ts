@@ -1,5 +1,7 @@
 import type { BrowserRunInfo } from "./browser.js";
 
+export type MarkdownEngine = "defuddle" | "turndown";
+
 export type HeadingInfo = {
   level: number;
   text: string;
@@ -50,6 +52,7 @@ export type ScrapeResult = {
   published: string | null;
   requestedUrl: string;
   site: string | null;
+  markdownEngine: MarkdownEngine;
   title: string | null;
   wordCount: number | null;
 };

@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { hashText, slugify } from "../lib/text.js";
+import { resolvePreferredUrl } from "../lib/url.js";
 import type { BrowserRunInfo } from "./browser.js";
 import type { CrawlResult, PageSnapshot, ScrapeResult, SearchResult } from "./types.js";
 
@@ -12,6 +13,10 @@ export type SavedFile = {
 
 type FetchArtifactOptions = {
   saveHtml?: boolean;
+  saveJson?: boolean;
+};
+
+type ScrapeArtifactOptions = {
   saveJson?: boolean;
 };
 
@@ -29,17 +34,8 @@ async function writeText(filePath: string, data: string) {
   await writeFile(filePath, data, "utf8");
 }
 
-function isHttpUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return (parsed.protocol === "http:" || parsed.protocol === "https:") && Boolean(parsed.hostname);
-  } catch {
-    return false;
-  }
-}
-
 function getUrlArtifactBase(outputDir: string, url: string, fallbackUrl?: string) {
-  const artifactUrl = isHttpUrl(url) ? url : fallbackUrl && isHttpUrl(fallbackUrl) ? fallbackUrl : url;
+  const artifactUrl = resolvePreferredUrl(url, fallbackUrl);
   const parsed = new URL(artifactUrl);
   const directory = path.resolve(outputDir, parsed.hostname);
   const pathSlug = slugify(parsed.pathname === "/" ? "home" : parsed.pathname);
@@ -84,7 +80,7 @@ function formatFrontmatter(data: Record<string, unknown>) {
 
 function buildFetchMarkdown(
   snapshot: PageSnapshot,
-  scrape: Pick<ScrapeResult, "author" | "markdown" | "published" | "site" | "title" | "wordCount">
+  scrape: Pick<ScrapeResult, "author" | "markdown" | "markdownEngine" | "published" | "site" | "title" | "wordCount">
 ) {
   const metadata = {
     title: scrape.title ?? snapshot.title,
@@ -98,6 +94,7 @@ function buildFetchMarkdown(
     status: snapshot.status,
     fetchedAt: snapshot.fetchedAt,
     browser: snapshot.browser,
+    markdownEngine: scrape.markdownEngine,
     htmlBytes: snapshot.html.length,
     markdownBytes: scrape.markdown.length,
     wordCount: scrape.wordCount,
@@ -133,7 +130,7 @@ export async function saveSearchArtifacts(
 export async function saveFetchArtifacts(
   outputDir: string,
   snapshot: PageSnapshot,
-  scrape: Pick<ScrapeResult, "author" | "markdown" | "published" | "site" | "title" | "wordCount">,
+  scrape: Pick<ScrapeResult, "author" | "markdown" | "markdownEngine" | "published" | "site" | "title" | "wordCount">,
   options: FetchArtifactOptions = {}
 ): Promise<SavedFile[]> {
   const base = getUrlArtifactBase(outputDir, snapshot.finalUrl, snapshot.requestedUrl);
@@ -166,22 +163,29 @@ export async function saveFetchArtifacts(
   return savedFiles;
 }
 
-export async function saveScrapeArtifacts(outputDir: string, scrape: ScrapeResult): Promise<SavedFile[]> {
+export async function saveScrapeArtifacts(
+  outputDir: string,
+  scrape: ScrapeResult,
+  options: ScrapeArtifactOptions = {}
+): Promise<SavedFile[]> {
   const base = getUrlArtifactBase(outputDir, scrape.finalUrl, scrape.requestedUrl);
   const metadataPath = path.join(base.directory, `scrape-${base.name}.json`);
   const markdownPath = path.join(base.directory, `scrape-${base.name}.md`);
   const { markdown, ...metadata } = scrape;
+  const savedFiles: SavedFile[] = [];
 
-  await writeJson(metadataPath, {
-    ...metadata,
-    markdownBytes: markdown.length
-  });
   await writeText(markdownPath, markdown);
+  savedFiles.push({ label: "scrape-markdown", path: markdownPath });
 
-  return [
-    { label: "scrape-metadata", path: metadataPath },
-    { label: "scrape-markdown", path: markdownPath }
-  ];
+  if (options.saveJson) {
+    await writeJson(metadataPath, {
+      ...metadata,
+      markdownBytes: markdown.length
+    });
+    savedFiles.push({ label: "scrape-metadata", path: metadataPath });
+  }
+
+  return savedFiles;
 }
 
 export async function saveCrawlArtifacts(outputDir: string, result: CrawlResult): Promise<SavedFile[]> {

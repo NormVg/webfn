@@ -6,6 +6,7 @@ import type { SearchProvider } from "../core/search.js";
 import { searchWeb } from "../core/search.js";
 import { saveSearchArtifacts } from "../core/storage.js";
 import { logger } from "../lib/logger.js";
+import { printMetric, printSavedFiles, printSection } from "../lib/ui.js";
 import {
   addBrowserOptions,
   addStorageOptions,
@@ -83,17 +84,19 @@ export function registerSearchCommand(program: Command) {
     logger.success(
       `Found ${results.length} result(s) for "${query}" using ${options.provider} via ${formatBrowserRunInfo(browser)}.`
     );
+    printSection(`Search: ${query}`);
+    printMetric("Provider", options.provider);
+    printMetric("Browser", formatBrowserRunInfo(browser));
+    printMetric("Results", results.length);
+    printMetric("Storage", storage.path);
     results.forEach((result, index) => {
-      console.log(`${index + 1}. ${result.title}`);
+      console.log(`\n${index + 1}. ${result.title}`);
       console.log(`   ${result.link}`);
       if (result.snippet) {
         console.log(`   ${result.snippet}`);
       }
     });
 
-    if (savedFiles.length > 0) {
-      logger.info(`Saved ${savedFiles.length} artifact(s):`);
-      savedFiles.forEach((file) => console.log(`- ${file.path}`));
-    }
+    printSavedFiles(savedFiles);
   });
 }

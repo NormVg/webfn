@@ -5,6 +5,7 @@ import { formatBrowserRunInfo } from "../core/browser.js";
 import { crawlSite } from "../core/crawler.js";
 import { saveCrawlArtifacts } from "../core/storage.js";
 import { logger } from "../lib/logger.js";
+import { printMetric, printSavedFiles, printSection } from "../lib/ui.js";
 import {
   addBrowserOptions,
   addStorageOptions,
@@ -76,17 +77,17 @@ export function registerCrawlCommand(program: Command) {
     }
 
     logger.success(`Crawled ${result.pages.length} page(s) using ${result.strategy}.`);
-    console.log(`Browser: ${formatBrowserRunInfo(result.browser)}`);
-    console.log(`Root: ${result.rootUrl}`);
-    console.log(`Sitemap URLs discovered: ${result.sitemapUrls.length}`);
+    printSection(`Crawl: ${result.rootUrl}`);
+    printMetric("Browser", formatBrowserRunInfo(result.browser));
+    printMetric("Strategy", result.strategy);
+    printMetric("Pages", result.pages.length);
+    printMetric("Sitemaps", result.sitemapUrls.length);
+    printMetric("Storage", storage.path);
     result.pages.slice(0, 10).forEach((page, index) => {
       const status = page.status ?? "error";
-      console.log(`${index + 1}. [${status}] ${page.finalUrl}`);
+      console.log(`\n${index + 1}. [${status}] ${page.finalUrl}`);
     });
 
-    if (savedFiles.length > 0) {
-      logger.info(`Saved ${savedFiles.length} artifact(s):`);
-      savedFiles.forEach((file) => console.log(`- ${file.path}`));
-    }
+    printSavedFiles(savedFiles);
   });
 }

@@ -1,9 +1,10 @@
 import { Defuddle } from "defuddle/node";
 import { parseHTML } from "linkedom";
+import TurndownService from "turndown";
 
 import { compactText } from "../lib/text.js";
 import { canonicalizeUrl, isInternalUrl } from "../lib/url.js";
-import type { HeadingInfo, LinkInfo, MediaInfo, PageSnapshot, PageSummary, ScrapeResult } from "./types.js";
+import type { HeadingInfo, LinkInfo, MarkdownEngine, MediaInfo, PageSnapshot, PageSummary, ScrapeResult } from "./types.js";
 
 function toArray<T>(value: Iterable<T>) {
   return Array.from(value);
@@ -119,7 +120,51 @@ export function parsePageDocument(html: string, pageUrl: string): PageSummary {
   };
 }
 
-export async function buildScrapeResult(snapshot: PageSnapshot): Promise<ScrapeResult> {
+function buildTurndownMarkdown(snapshot: PageSnapshot) {
+  const { document } = parseHTML(snapshot.html);
+  const turndown = new TurndownService({
+    bulletListMarker: "-",
+    codeBlockStyle: "fenced",
+    headingStyle: "atx"
+  });
+
+  turndown.keep(["table", "thead", "tbody", "tr", "th", "td"]);
+
+  document.querySelectorAll("script, style, noscript").forEach((element) => {
+    element.remove();
+  });
+
+  const root = document.body ?? document.documentElement;
+  return compactText(root?.textContent) ? turndown.turndown(root.innerHTML) : snapshot.text;
+}
+
+export async function buildScrapeResult(
+  snapshot: PageSnapshot,
+  options: {
+    markdownEngine?: MarkdownEngine;
+  } = {}
+): Promise<ScrapeResult> {
+  const markdownEngine = options.markdownEngine ?? "defuddle";
+
+  if (markdownEngine === "turndown") {
+    return {
+      author: null,
+      browser: snapshot.browser,
+      description: snapshot.description,
+      finalUrl: snapshot.finalUrl,
+      headings: snapshot.headings,
+      links: snapshot.links,
+      markdown: buildTurndownMarkdown(snapshot),
+      markdownEngine,
+      media: snapshot.media,
+      published: null,
+      requestedUrl: snapshot.requestedUrl,
+      site: snapshot.metaTags["og:site_name"] ?? null,
+      title: snapshot.title,
+      wordCount: snapshot.text.split(/\s+/).filter(Boolean).length || null
+    };
+  }
+
   const result = await Defuddle(snapshot.html, snapshot.finalUrl, {
     markdown: true,
     useAsync: false
@@ -133,6 +178,7 @@ export async function buildScrapeResult(snapshot: PageSnapshot): Promise<ScrapeR
     headings: snapshot.headings,
     links: snapshot.links,
     markdown: compactText(result.content) ? result.content : snapshot.text,
+    markdownEngine,
     media: snapshot.media,
     published: emptyToNull(result.published),
     requestedUrl: snapshot.requestedUrl,

@@ -20,6 +20,27 @@ export function canonicalizeUrl(input: string, base?: string) {
   }
 }
 
+export function isHttpUrl(input: string) {
+  try {
+    const url = new URL(input);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function resolvePreferredUrl(primary: string, fallback?: string) {
+  if (isHttpUrl(primary)) {
+    return primary;
+  }
+
+  if (fallback && isHttpUrl(fallback)) {
+    return fallback;
+  }
+
+  return primary;
+}
+
 export function isInternalUrl(candidate: string, rootUrl: string) {
   try {
     return new URL(candidate).origin === new URL(rootUrl).origin;

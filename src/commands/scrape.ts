@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import chalk from "chalk";
 
 import type { NavigationWaitUntil } from "../core/browser.js";
 import { formatBrowserRunInfo } from "../core/browser.js";
@@ -6,8 +7,11 @@ import { fetchPageSnapshotWithEngine } from "../core/fetcher.js";
 import { buildScrapeResult } from "../core/parser.js";
 import { saveScrapeArtifacts } from "../core/storage.js";
 import { logger } from "../lib/logger.js";
+import { printMetric, printSavedFiles, printSection } from "../lib/ui.js";
+import { resolvePreferredUrl } from "../lib/url.js";
 import {
   addBrowserOptions,
+  addMarkdownEngineOption,
   addStorageOptions,
   addWaitUntilOption,
   resolveStorageOptions,
@@ -22,7 +26,9 @@ type ScrapeCommandOptions = {
   headed?: boolean;
   json?: boolean;
   lightpandaPort: number;
+  markdownEngine: "defuddle" | "turndown";
   outputDir?: string;
+  saveJson?: boolean;
   stdout?: boolean;
   store: boolean;
   timeoutMs: number;
@@ -36,9 +42,11 @@ export function registerScrapeCommand(program: Command) {
     .description("Extract readable markdown plus structured page metadata")
     .argument("<url>", "Page URL")
     .option("--json", "Print the structured scrape payload as JSON")
+    .option("--save-json", "Also save scrape metadata JSON next to the markdown file")
     .option("--stdout", "Print the extracted markdown to stdout");
 
   addBrowserOptions(command);
+  addMarkdownEngineOption(command);
   addStorageOptions(command);
   addWaitUntilOption(command);
 
@@ -48,8 +56,15 @@ export function registerScrapeCommand(program: Command) {
     const snapshot = await fetchPageSnapshotWithEngine(browserOptions, url, {
       waitUntil: options.waitUntil
     });
-    const scrape = await buildScrapeResult(snapshot);
-    const savedFiles = options.store ? await saveScrapeArtifacts(storage.path, scrape) : [];
+    const scrape = await buildScrapeResult(snapshot, {
+      markdownEngine: options.markdownEngine
+    });
+    const displayUrl = resolvePreferredUrl(scrape.finalUrl, scrape.requestedUrl);
+    const savedFiles = options.store
+      ? await saveScrapeArtifacts(storage.path, scrape, {
+          saveJson: Boolean(options.saveJson)
+        })
+      : [];
 
     if (options.json) {
       process.stdout.write(
@@ -69,23 +84,25 @@ export function registerScrapeCommand(program: Command) {
       return;
     }
 
-    logger.success(`Scraped ${scrape.finalUrl}`);
-    console.log(`Browser: ${formatBrowserRunInfo(scrape.browser)}`);
-    console.log(`Title: ${scrape.title ?? "(none)"}`);
-    console.log(`Description: ${scrape.description ?? "(none)"}`);
-    console.log(`Word count: ${scrape.wordCount ?? "unknown"}`);
-    console.log(`Headings: ${scrape.headings.length}`);
-    console.log(`Links: ${scrape.links.length}`);
-    console.log(`Media: ${scrape.media.length}`);
+    logger.success(`Scraped ${displayUrl}`);
+    printSection(scrape.title ?? "Scraped Page");
+    printMetric("URL", displayUrl);
+    printMetric("Browser", formatBrowserRunInfo(scrape.browser));
+    printMetric("Markdown", scrape.markdownEngine);
+    printMetric("Words", scrape.wordCount ?? "unknown");
+    printMetric("Headings", scrape.headings.length);
+    printMetric("Links", scrape.links.length);
+    printMetric("Media", scrape.media.length);
+    printMetric("Storage", storage.path);
+    if (scrape.description) {
+      console.log(`\n${chalk.dim(scrape.description)}`);
+    }
 
     if (options.stdout) {
-      console.log("");
+      printSection("Markdown");
       process.stdout.write(`${scrape.markdown.trim()}\n`);
     }
 
-    if (savedFiles.length > 0) {
-      logger.info(`Saved ${savedFiles.length} artifact(s):`);
-      savedFiles.forEach((file) => console.log(`- ${file.path}`));
-    }
+    printSavedFiles(savedFiles);
   });
 }

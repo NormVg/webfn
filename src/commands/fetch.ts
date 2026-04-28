@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import chalk from "chalk";
 
 import type { NavigationWaitUntil } from "../core/browser.js";
 import { formatBrowserRunInfo } from "../core/browser.js";
@@ -6,8 +7,11 @@ import { fetchPageSnapshotWithEngine, summarizePageSnapshot } from "../core/fetc
 import { buildScrapeResult } from "../core/parser.js";
 import { saveFetchArtifacts } from "../core/storage.js";
 import { logger } from "../lib/logger.js";
+import { printMetric, printSavedFiles, printSection } from "../lib/ui.js";
+import { resolvePreferredUrl } from "../lib/url.js";
 import {
   addBrowserOptions,
+  addMarkdownEngineOption,
   addStorageOptions,
   addWaitUntilOption,
   resolveStorageOptions,
@@ -22,6 +26,7 @@ type FetchCommandOptions = {
   headed?: boolean;
   json?: boolean;
   lightpandaPort: number;
+  markdownEngine: "defuddle" | "turndown";
   outputDir?: string;
   saveHtml?: boolean;
   saveJson?: boolean;
@@ -41,6 +46,7 @@ export function registerFetchCommand(program: Command) {
     .option("--save-json", "Also save metadata JSON next to the markdown file");
 
   addBrowserOptions(command);
+  addMarkdownEngineOption(command);
   addStorageOptions(command);
   addWaitUntilOption(command);
 
@@ -51,7 +57,10 @@ export function registerFetchCommand(program: Command) {
       waitUntil: options.waitUntil
     });
     const summary = summarizePageSnapshot(snapshot);
-    const scrape = await buildScrapeResult(snapshot);
+    const scrape = await buildScrapeResult(snapshot, {
+      markdownEngine: options.markdownEngine
+    });
+    const displayUrl = resolvePreferredUrl(snapshot.finalUrl, snapshot.requestedUrl);
     const savedFiles = options.store
       ? await saveFetchArtifacts(storage.path, snapshot, scrape, {
           saveHtml: Boolean(options.saveHtml),
@@ -66,6 +75,7 @@ export function registerFetchCommand(program: Command) {
             savedFiles,
             snapshot: {
               ...summary,
+              markdownEngine: scrape.markdownEngine,
               markdownLength: scrape.markdown.length,
               wordCount: scrape.wordCount
             },
@@ -78,20 +88,21 @@ export function registerFetchCommand(program: Command) {
       return;
     }
 
-    logger.success(`Fetched ${summary.finalUrl}`);
-    console.log(`Browser: ${formatBrowserRunInfo(snapshot.browser)}`);
-    console.log(`Title: ${summary.title ?? "(none)"}`);
-    console.log(`Status: ${summary.status ?? "unknown"}`);
-    console.log(`Description: ${summary.description ?? "(none)"}`);
-    console.log(`Headings: ${summary.headings}`);
-    console.log(`Links: ${summary.links}`);
-    console.log(`Media: ${summary.media}`);
-    console.log(`HTML bytes: ${summary.htmlLength}`);
-    console.log(`Markdown bytes: ${scrape.markdown.length}`);
-
-    if (savedFiles.length > 0) {
-      logger.info(`Saved ${savedFiles.length} artifact(s):`);
-      savedFiles.forEach((file) => console.log(`- ${file.path}`));
+    logger.success(`Fetched ${displayUrl}`);
+    printSection(summary.title ?? "Fetched Page");
+    printMetric("URL", displayUrl);
+    printMetric("Browser", formatBrowserRunInfo(snapshot.browser));
+    printMetric("Markdown", scrape.markdownEngine);
+    printMetric("Status", summary.status ?? "unknown");
+    printMetric("Headings", summary.headings);
+    printMetric("Links", summary.links);
+    printMetric("Media", summary.media);
+    printMetric("HTML bytes", summary.htmlLength);
+    printMetric("MD bytes", scrape.markdown.length);
+    printMetric("Storage", storage.path);
+    if (summary.description) {
+      console.log(`\n${chalk.dim(summary.description)}`);
     }
+    printSavedFiles(savedFiles);
   });
 }
