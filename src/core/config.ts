@@ -14,7 +14,9 @@ export type WebfnConfig = {
   delay?: number;
   results?: number;
   waitUntil?: "domcontentloaded" | "networkidle2";
-  engine?: "chrome" | "lightpanda";
+  engine?: "chrome" | "lightpanda" | "cloudflare";
+  cloudflareAccountId?: string;
+  cloudflareApiToken?: string;
 };
 
 const CONFIG_KEYS: Record<keyof WebfnConfig, "string" | "number"> = {
@@ -26,6 +28,8 @@ const CONFIG_KEYS: Record<keyof WebfnConfig, "string" | "number"> = {
   results: "number",
   waitUntil: "string",
   engine: "string",
+  cloudflareAccountId: "string",
+  cloudflareApiToken: "string",
 };
 
 export type ResolvedOutputDirectory = {

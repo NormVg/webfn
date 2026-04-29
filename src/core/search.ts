@@ -3,6 +3,7 @@ import type { Page } from "puppeteer-core";
 
 import type { BrowserLaunchOptions, BrowserRunInfo } from "./browser.js";
 import { gotoAndWait, withBrowserSession } from "./browser.js";
+import { fetchCloudflareContent } from "./cloudflare.js";
 import type { SearchResult } from "./types.js";
 import { compactText, sleep } from "../lib/text.js";
 import { canonicalizeUrl } from "../lib/url.js";
@@ -232,7 +233,21 @@ export async function searchWeb(
     timeoutMs: number;
   }
 ): Promise<SearchWebResponse> {
-  const url = buildSearchUrl(query, options.provider);
+  const providerToUse = browser.engine === "cloudflare" && options.provider === "google" ? "duckduckgo" : options.provider;
+  const url = buildSearchUrl(query, providerToUse);
+
+  if (browser.engine === "cloudflare") {
+    const html = await fetchCloudflareContent(url, browser);
+    return {
+      browser: {
+        engine: "cloudflare",
+        headless: true,
+        mode: "headless",
+        requestedEngine: "cloudflare"
+      },
+      results: extractResultsFromHtml(providerToUse, html, options.maxResults)
+    };
+  }
 
   try {
     return await withBrowserSession(browser, async ({ page, runtime }) => {
@@ -242,14 +257,14 @@ export async function searchWeb(
         waitUntil: "domcontentloaded"
       });
 
-      if (options.provider === "google") {
+      if (providerToUse === "google") {
         await dismissGoogleConsent(page);
       }
 
       const html = await page.content();
       return {
         browser: runtime,
-        results: extractResultsFromHtml(options.provider, html, options.maxResults)
+        results: extractResultsFromHtml(providerToUse, html, options.maxResults)
       };
     });
   } catch (error: unknown) {

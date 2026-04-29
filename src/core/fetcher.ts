@@ -6,7 +6,7 @@ import { parsePageDocument } from "./parser.js";
 import type { PageSnapshot } from "./types.js";
 import { resolvePreferredUrl } from "../lib/url.js";
 
-function buildPageSnapshot(input: {
+export function buildPageSnapshot(input: {
   browser: BrowserRunInfo;
   fetchedAt?: string;
   finalUrl: string;
@@ -51,6 +51,8 @@ export async function fetchPageSnapshot(
   });
 }
 
+import { fetchCloudflareContent } from "./cloudflare.js";
+
 export async function fetchPageSnapshotWithEngine(
   browser: BrowserLaunchOptions,
   url: string,
@@ -58,6 +60,22 @@ export async function fetchPageSnapshotWithEngine(
     waitUntil: NavigationWaitUntil;
   }
 ): Promise<PageSnapshot> {
+  if (browser.engine === "cloudflare") {
+    const html = await fetchCloudflareContent(url, browser);
+    return buildPageSnapshot({
+      browser: {
+        engine: "cloudflare",
+        headless: true,
+        mode: "headless",
+        requestedEngine: "cloudflare",
+      },
+      finalUrl: url,
+      html,
+      requestedUrl: url,
+      status: 200,
+    });
+  }
+
   return withBrowserSession(browser, async ({ page, runtime }) =>
     fetchPageSnapshot(page, url, {
       browser: runtime,

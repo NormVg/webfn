@@ -11,7 +11,7 @@ import { sleep } from "../lib/text.js";
 export const DEFAULT_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-export type BrowserEngineOption = "chrome" | "lightpanda";
+export type BrowserEngineOption = "chrome" | "lightpanda" | "cloudflare";
 export type ResolvedBrowserEngine = BrowserEngineOption;
 export type NavigationWaitUntil = "domcontentloaded" | "networkidle2";
 export type BrowserRunMode = "headed" | "headless";
@@ -24,6 +24,8 @@ export type BrowserLaunchOptions = {
   lightpandaPort: number;
   timeoutMs: number;
   userAgent?: string;
+  cloudflareAccountId?: string;
+  cloudflareApiToken?: string;
 };
 
 export type BrowserSession = {
@@ -82,12 +84,15 @@ export async function resolveBrowserEngine(options: BrowserLaunchOptions): Promi
     if (options.engine === "lightpanda") {
       throw new Error("Lightpanda is headless-only. Use Chrome/Chromium for headed mode.");
     }
+    if (options.engine === "cloudflare") {
+      throw new Error("Cloudflare Browser Rendering is headless-only.");
+    }
 
     return "chrome";
   }
 
-  if (options.engine === "chrome") {
-    return "chrome";
+  if (options.engine === "chrome" || options.engine === "cloudflare") {
+    return options.engine;
   }
 
   if (!(await detectLightpandaAvailability())) {

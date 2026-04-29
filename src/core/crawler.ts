@@ -2,7 +2,8 @@ import { XMLParser } from "fast-xml-parser";
 
 import { canonicalizeUrl, isInternalUrl, isLikelyPageUrl } from "../lib/url.js";
 import { withBrowserSession } from "./browser.js";
-import { fetchPageSnapshot } from "./fetcher.js";
+import { fetchCloudflareContent } from "./cloudflare.js";
+import { buildPageSnapshot, fetchPageSnapshot } from "./fetcher.js";
 import { fetchText } from "./http.js";
 import type { BrowserLaunchOptions, BrowserRunInfo, NavigationWaitUntil } from "./browser.js";
 import type { CrawlPage, CrawlResult, PageSnapshot } from "./types.js";
@@ -231,8 +232,13 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
   let browserRuntime: BrowserRunInfo | null = null;
   options.onStatus?.(useSitemap ? `Loaded ${sitemapUrls.length} sitemap URLs` : "Crawling internal links");
 
-  await withBrowserSession(options.browser, async ({ page, runtime }) => {
-    browserRuntime = runtime;
+  if (options.browser.engine === "cloudflare") {
+    browserRuntime = {
+      engine: "cloudflare",
+      headless: true,
+      mode: "headless",
+      requestedEngine: "cloudflare"
+    };
 
     while (queue.length > 0 && pages.length < options.maxPages) {
       const next = queue.shift();
@@ -250,12 +256,15 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
       seen.add(normalized);
 
       try {
-        const snapshot = await fetchPageSnapshot(page, normalized, {
-          browser: runtime,
-          delayMs: options.browser.delayMs,
-          timeoutMs: options.timeoutMs,
-          waitUntil: options.waitUntil
+        const html = await fetchCloudflareContent(normalized, options.browser);
+        const snapshot = buildPageSnapshot({
+          browser: browserRuntime,
+          finalUrl: normalized,
+          html,
+          requestedUrl: normalized,
+          status: 200
         });
+
         pushCrawlPage(pages, next, snapshot);
         await options.onPageFetched?.({
           processed: pages.length,
@@ -276,7 +285,54 @@ export async function crawlSite(rootUrl: string, options: CrawlOptions): Promise
         });
       }
     }
-  });
+  } else {
+    await withBrowserSession(options.browser, async ({ page, runtime }) => {
+      browserRuntime = runtime;
+
+      while (queue.length > 0 && pages.length < options.maxPages) {
+        const next = queue.shift();
+
+        if (!next) {
+          break;
+        }
+
+        const normalized = canonicalizeUrl(next.url);
+
+        if (!normalized || seen.has(normalized) || !isLikelyPageUrl(normalized)) {
+          continue;
+        }
+
+        seen.add(normalized);
+
+        try {
+          const snapshot = await fetchPageSnapshot(page, normalized, {
+            browser: runtime,
+            delayMs: options.browser.delayMs,
+            timeoutMs: options.timeoutMs,
+            waitUntil: options.waitUntil
+          });
+          pushCrawlPage(pages, next, snapshot);
+          await options.onPageFetched?.({
+            processed: pages.length,
+            queued: queue.length,
+            snapshot
+          });
+
+          if (strategy === "links") {
+            enqueueInternalLinks(queue, queued, seen, next, options.maxDepth, snapshot);
+          }
+        } catch (error: unknown) {
+          pushCrawlError(pages, next, normalized, error);
+          options.onPageError?.({
+            error: error instanceof Error ? error.message : String(error),
+            processed: pages.length,
+            queued: queue.length,
+            url: normalized
+          });
+        }
+      }
+    });
+  }
 
   if (!browserRuntime) {
     throw new Error("Browser runtime was not resolved.");

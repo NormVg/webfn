@@ -17,6 +17,8 @@ export type SharedCommandOptions = {
   save: boolean;
   timeout: number;
   userAgent?: string;
+  cloudflareAccountId?: string;
+  cloudflareApiToken?: string;
 };
 
 export function parsePositiveInteger(value: string) {
@@ -44,7 +46,7 @@ export function addBrowserOptions(command: Command) {
     .option("--headed", "Run with a visible Chrome/Chromium window")
     .addOption(
       new Option("--engine <engine>", "Browser engine")
-        .choices(["chrome", "lightpanda"] satisfies BrowserEngineOption[])
+        .choices(["chrome", "lightpanda", "cloudflare"] satisfies BrowserEngineOption[])
     )
     .option("--chrome <path>", "Path to Chrome/Chromium executable")
     .option("--timeout <ms>", "Navigation timeout in ms", parsePositiveInteger, 30_000)
@@ -139,6 +141,14 @@ export async function mergeConfigDefaults<T extends SharedCommandOptions>(
     (merged as Record<string, unknown>).results = cfg.results;
   }
 
+  if (cfg.cloudflareAccountId && !explicitlySet("cloudflareAccountId")) {
+    (merged as Record<string, unknown>).cloudflareAccountId = cfg.cloudflareAccountId;
+  }
+
+  if (cfg.cloudflareApiToken && !explicitlySet("cloudflareApiToken")) {
+    (merged as Record<string, unknown>).cloudflareApiToken = cfg.cloudflareApiToken;
+  }
+
   return merged;
 }
 
@@ -149,6 +159,16 @@ export function toBrowserLaunchOptions(options: SharedCommandOptions): BrowserLa
     lightpandaPort: options.lpPort,
     timeoutMs: options.timeout,
   };
+
+  const accountId = options.cloudflareAccountId ?? process.env.CLOUDFLARE_ACC_ID ?? process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (accountId) {
+    launchOptions.cloudflareAccountId = accountId;
+  }
+
+  const apiToken = options.cloudflareApiToken ?? process.env.CLOUDFLARE_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN;
+  if (apiToken) {
+    launchOptions.cloudflareApiToken = apiToken;
+  }
 
   if (options.engine) {
     launchOptions.engine = options.engine;
