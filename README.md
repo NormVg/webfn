@@ -1,11 +1,13 @@
 <div align="center">
-  <pre>
-  _       __     __    ______
- | |     / /__  / /_  / ____/___
- | | /| / / _ \/ __ \/ /_  / __ \
- | |/ |/ /  __/ /_/ / __/ / / / /
- |__/|__/\___/_.___/_/   /_/ /_/
-  </pre>
+
+```text
+ _       __     __    ______
+| |     / /__  / /_  / ____/___
+| | /| / / _ \/ __ \/ /_  / __ \
+| |/ |/ /  __/ /_/ / __/ / / / /
+|__/|__/\___/_.___/_/   /_/ /_/
+```
+
   <p><b>Agent-oriented CLI for browser-backed search, fetch, and crawl workflows.</b></p>
   
   <p>
@@ -17,7 +19,7 @@
 
 ---
 
-## ⚡ Overview
+## Overview
 
 Webfn is the ultimate web data extraction tool designed specifically for **AI Agents** and **Automated Pipelines**. 
 
@@ -29,7 +31,7 @@ Whether you need to bypass anti-bot protections, extract clean markdown from hea
 - **Screenshot** pages natively or via the cloud.
 - **Auto-Detect** agent mode — outputs pure JSON when piped, rich CLI UI when in a terminal.
 
-## 🏗 Architecture
+## Architecture
 
 ```mermaid
 graph TD
@@ -51,7 +53,7 @@ graph TD
     J --> M[(Local Storage / JSON stdout)]
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 Ensure you have [Node.js](https://nodejs.org/) installed, then:
 
@@ -65,7 +67,7 @@ Verify your environment dependencies:
 pnpm dev doctor
 ```
 
-## 🤖 Agent-First Design
+## Agent-First Design
 
 Webfn is built to be controlled by LLMs and Agents.
 
@@ -95,7 +97,7 @@ All JSON output follows a consistent format:
 }
 ```
 
-## 📚 Core Commands
+## Core Commands
 
 ```bash
 # Search for a topic
@@ -116,7 +118,7 @@ webfn crawl https://example.com --depth 2 --max-pages 50
 
 For comprehensive configuration and documentation, see **[docs.md](./docs.md)**.
 
-## ⚙️ Built With
+## Built With
 
 Webfn leverages powerful open-source libraries:
 - **[Puppeteer](https://pptr.dev/)**: For headless browser automation and CDP control.
@@ -124,7 +126,7 @@ Webfn leverages powerful open-source libraries:
 - **[Cloudflare Browser Rendering](https://developers.cloudflare.com/browser-rendering/)**: For edge-based, serverless page evaluation.
 - **[Commander.js](https://github.com/tj/commander.js)**: For robust CLI routing and option parsing.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are always welcome! 
 
@@ -136,6 +138,6 @@ Contributions are always welcome!
 
 Please ensure you run `pnpm run format` and verify your changes don't break the agent JSON output structures.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
