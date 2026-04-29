@@ -27,7 +27,7 @@ Whether you need to bypass anti-bot protections, extract clean markdown from hea
 
 ## Architecture
 
-<div align="center">
+<div align="center" style="border-radius: 10px;">
 
 <img src="./.github/flowv2.svg" alt="Webfn Banner" width="100%">
 
