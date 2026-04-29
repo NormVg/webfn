@@ -1,33 +1,33 @@
 {
-  "_comment": "Rename this file to webfn.config.json to use it.",
+  // Rename this file to webfn.config.json to use it.
   
-  "_comment_outputDir": "Directory where fetched files, screenshots, and metadata will be saved.",
+  // Directory where fetched files, screenshots, and metadata will be saved.
   "outputDir": "agent-data",
   
-  "_comment_provider": "Search engine to use for queries. Supported: 'google', 'duckduckgo'.",
+  // Search engine to use for queries. Supported: 'google', 'duckduckgo'.
   "provider": "google",
   
-  "_comment_mdEngine": "Markdown parser for converting HTML to Markdown. Supported: 'defuddle', 'turndown'.",
+  // Markdown parser for converting HTML to Markdown. Supported: 'defuddle', 'turndown'.
   "mdEngine": "defuddle",
   
-  "_comment_timeout": "Maximum time in milliseconds to wait for page navigation and fetching.",
+  // Maximum time in milliseconds to wait for page navigation and fetching.
   "timeout": 30000,
   
-  "_comment_delay": "Time in milliseconds to wait AFTER the page has loaded before capturing content/screenshot.",
+  // Time in milliseconds to wait AFTER the page has loaded before capturing content/screenshot.
   "delay": 1200,
   
-  "_comment_results": "Default number of search results to fetch and collect.",
+  // Default number of search results to fetch and collect.
   "results": 5,
   
-  "_comment_waitUntil": "Puppeteer wait condition for page loads. Supported: 'networkidle2', 'domcontentloaded'.",
+  // Puppeteer wait condition for page loads. Supported: 'networkidle2', 'domcontentloaded'.
   "waitUntil": "networkidle2",
   
-  "_comment_engine": "Browser execution engine. Supported: 'chrome' (local headless), 'lightpanda' (local fast engine), 'cloudflare' (remote serverless edge rendering).",
+  // Browser execution engine. Supported: 'chrome' (local headless), 'lightpanda' (local fast engine), 'cloudflare' (remote serverless edge rendering).
   "engine": "chrome",
   
-  "_comment_cloudflareAccountId": "Your Cloudflare Account ID. Required ONLY if engine is set to 'cloudflare'. (It is safer to set this in your .env file).",
+  // Your Cloudflare Account ID. Required ONLY if engine is set to 'cloudflare'. (It is safer to set this in your .env file).
   "cloudflareAccountId": "your_cloudflare_account_id_here",
   
-  "_comment_cloudflareApiToken": "Your Cloudflare API Token. Required ONLY if engine is set to 'cloudflare'. (It is safer to set this in your .env file).",
+  // Your Cloudflare API Token. Required ONLY if engine is set to 'cloudflare'. (It is safer to set this in your .env file).
   "cloudflareApiToken": "your_cloudflare_api_token_here"
 }
