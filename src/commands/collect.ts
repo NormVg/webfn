@@ -169,8 +169,10 @@ export function registerCollectCommand(program: Command) {
         return;
       }
 
+      const actualProvider = searchResponse.results[0]?.provider ?? options.provider;
+
       printKeyValueBox(`Collect: ${query}`, [
-        { key: "Provider", value: options.provider },
+        { key: "Provider", value: actualProvider },
         { key: "Engine", value: formatBrowserRunInfo(searchResponse.browser) },
         { key: "Results", value: searchResponse.results.length },
         { key: "Fetched", value: successCount },

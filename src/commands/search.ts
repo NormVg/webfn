@@ -88,7 +88,7 @@ export function registerSearchCommand(program: Command) {
       }
 
       printKeyValueBox(`Search: ${query}`, [
-        { key: "Provider", value: options.provider },
+        { key: "Provider", value: results[0]?.provider ?? options.provider },
         { key: "Engine", value: formatBrowserRunInfo(browser) },
         { key: "Results", value: results.length },
         { key: "Storage", value: storage.path },

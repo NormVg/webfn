@@ -253,16 +253,45 @@ export async function searchWeb(
       };
     });
   } catch (error: unknown) {
-    if (browser.engine === undefined && browser.headless && isSearchChallengeError(error)) {
-      const response: SearchWebResponse = await searchWeb({ ...browser, engine: "chrome" }, query, options);
+    if (!isSearchChallengeError(error)) {
+      throw error;
+    }
+
+    // Fallback 1: retry with Chrome if we were on Lightpanda
+    if (browser.engine === undefined && browser.headless) {
+      try {
+        const response: SearchWebResponse = await searchWeb({ ...browser, engine: "chrome" }, query, options);
+
+        return {
+          ...response,
+          browser: {
+            ...response.browser,
+            fallbackFrom: "lightpanda",
+            requestedEngine: "default"
+          }
+        };
+      } catch (retryError: unknown) {
+        if (!isSearchChallengeError(retryError)) {
+          throw retryError;
+        }
+        // Chrome also got captcha'd — fall through to provider fallback
+      }
+    }
+
+    // Fallback 2: switch provider (google → duckduckgo)
+    if (options.provider === "google") {
+      const response: SearchWebResponse = await searchWeb(browser, query, {
+        ...options,
+        provider: "duckduckgo"
+      });
 
       return {
         ...response,
         browser: {
           ...response.browser,
-          fallbackFrom: "lightpanda",
-          requestedEngine: "default"
-        }
+          fallbackFrom: response.browser.fallbackFrom ?? response.browser.engine,
+          providerFallback: "google→duckduckgo"
+        } as BrowserRunInfo & { providerFallback: string }
       };
     }
 
