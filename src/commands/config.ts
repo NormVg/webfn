@@ -1,8 +1,26 @@
 import { Command } from "commander";
 import chalk from "chalk";
 
-import { DEFAULT_CONFIG_FILE, loadConfig, writeConfig } from "../core/config.js";
+import {
+  DEFAULT_CONFIG_FILE,
+  getConfigKeyType,
+  isValidConfigKey,
+  loadConfig,
+  writeConfig,
+  type WebfnConfig,
+} from "../core/config.js";
 import { printKeyValueBox, printSection, writeJsonOutput } from "../lib/ui.js";
+
+const ALL_CONFIG_KEYS: (keyof WebfnConfig)[] = [
+  "outputDir",
+  "provider",
+  "mdEngine",
+  "timeout",
+  "delay",
+  "results",
+  "waitUntil",
+  "engine",
+];
 
 export function registerConfigCommand(program: Command) {
   const configCmd = program
@@ -25,15 +43,25 @@ export function registerConfigCommand(program: Command) {
         return;
       }
 
-      const path = await writeConfig({ outputDir: "data" });
+      const defaultConfig: WebfnConfig = {
+        outputDir: "data",
+        provider: "google",
+        mdEngine: "defuddle",
+        timeout: 30000,
+        delay: 1200,
+        results: 5,
+        waitUntil: "networkidle2",
+      };
+
+      const path = await writeConfig(defaultConfig);
       
       if (options.json || !process.stdout.isTTY) {
-        writeJsonOutput({ ok: true, command: "config init", path });
+        writeJsonOutput({ ok: true, command: "config init", path, config: defaultConfig });
         return;
       }
 
       printSection("Configuration");
-      console.log(`${chalk.green("✔")} Created new config file at ${chalk.dim(path)}`);
+      console.log(`${chalk.green("✔")} Created config at ${chalk.dim(path)}`);
     });
 
   configCmd
@@ -47,7 +75,7 @@ export function registerConfigCommand(program: Command) {
         if (options.json || !process.stdout.isTTY) {
           writeJsonOutput({ ok: true, command: "config show", config: null, path: null });
         } else {
-          console.log(chalk.dim(`No ${DEFAULT_CONFIG_FILE} found in current directory.`));
+          console.log(chalk.dim(`No ${DEFAULT_CONFIG_FILE} found. Run 'webfn config init' to create one.`));
         }
         return;
       }
@@ -57,9 +85,12 @@ export function registerConfigCommand(program: Command) {
         return;
       }
 
-      printKeyValueBox(`Config: ${loaded.path}`, [
-        { key: "outputDir", value: loaded.config.outputDir },
-      ]);
+      const entries = ALL_CONFIG_KEYS.map((key) => ({
+        key,
+        value: loaded.config[key] as string | number | undefined,
+      }));
+
+      printKeyValueBox(`Config: ${loaded.path}`, entries);
     });
 
   configCmd
@@ -78,7 +109,18 @@ export function registerConfigCommand(program: Command) {
         return;
       }
 
-      const value = loaded.config[key as keyof typeof loaded.config];
+      if (!isValidConfigKey(key)) {
+        const msg = `Unknown key: "${key}". Valid keys: ${ALL_CONFIG_KEYS.join(", ")}`;
+        if (options.json || !process.stdout.isTTY) {
+          writeJsonOutput({ ok: false, error: msg });
+        } else {
+          console.error(chalk.red(`✖ ${msg}`));
+        }
+        process.exitCode = 1;
+        return;
+      }
+
+      const value = loaded.config[key];
 
       if (options.json || !process.stdout.isTTY) {
         writeJsonOutput({ ok: true, command: "config get", key, value });
@@ -97,28 +139,45 @@ export function registerConfigCommand(program: Command) {
     .description("Set a configuration value")
     .option("--json", "Force JSON output")
     .action(async (key: string, value: string, options: { json?: boolean }) => {
-      let loaded = await loadConfig();
-      let config = loaded?.config ?? {};
-      
-      if (key === "outputDir") {
-        config.outputDir = value;
-      } else {
+      if (!isValidConfigKey(key)) {
+        const msg = `Unknown key: "${key}". Valid keys: ${ALL_CONFIG_KEYS.join(", ")}`;
         if (options.json || !process.stdout.isTTY) {
-          writeJsonOutput({ ok: false, error: `Unknown configuration key: ${key}` });
+          writeJsonOutput({ ok: false, error: msg });
         } else {
-          console.error(chalk.red(`✖ Unknown configuration key: ${key}`));
+          console.error(chalk.red(`✖ ${msg}`));
         }
         process.exitCode = 1;
         return;
       }
 
+      let loaded = await loadConfig();
+      let config = loaded?.config ?? {};
+
+      const keyType = getConfigKeyType(key);
+      if (keyType === "number") {
+        const numVal = Number(value);
+        if (Number.isNaN(numVal) || numVal <= 0) {
+          const msg = `"${key}" must be a positive number, got "${value}"`;
+          if (options.json || !process.stdout.isTTY) {
+            writeJsonOutput({ ok: false, error: msg });
+          } else {
+            console.error(chalk.red(`✖ ${msg}`));
+          }
+          process.exitCode = 1;
+          return;
+        }
+        (config as Record<string, unknown>)[key] = numVal;
+      } else {
+        (config as Record<string, unknown>)[key] = value;
+      }
+
       const path = await writeConfig(config);
 
       if (options.json || !process.stdout.isTTY) {
-        writeJsonOutput({ ok: true, command: "config set", key, value, path });
+        writeJsonOutput({ ok: true, command: "config set", key, value: (config as Record<string, unknown>)[key], path });
         return;
       }
 
-      console.log(`${chalk.green("✔")} Set ${chalk.hex("#8B5CF6")(key)} to ${chalk.white(value)}`);
+      console.log(`${chalk.green("✔")} Set ${chalk.hex("#8B5CF6")(key)} = ${chalk.white(String((config as Record<string, unknown>)[key]))}`);
     });
 }

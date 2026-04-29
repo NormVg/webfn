@@ -22,6 +22,7 @@ import {
   addMarkdownEngineOption,
   addOutputOptions,
   addWaitUntilOption,
+  mergeConfigDefaults,
   parsePositiveInteger,
   resolveStorageOptions,
   shouldOutputJson,
@@ -76,7 +77,8 @@ export function registerCollectCommand(program: Command) {
   addOutputOptions(command);
   addWaitUntilOption(command);
 
-  command.action(async (query: string, options: CollectCommandOptions) => {
+  command.action(async (query: string, rawOptions: CollectCommandOptions, cmd) => {
+    const options = await mergeConfigDefaults(rawOptions, cmd);
     const searchSpinner = startSpinner(`Searching ${options.provider} for "${query}"`);
 
     try {

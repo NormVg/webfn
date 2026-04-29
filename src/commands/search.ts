@@ -16,6 +16,7 @@ import type { ResultItem } from "../lib/ui.js";
 import {
   addBrowserOptions,
   addOutputOptions,
+  mergeConfigDefaults,
   parsePositiveInteger,
   resolveStorageOptions,
   shouldOutputJson,
@@ -53,7 +54,8 @@ export function registerSearchCommand(program: Command) {
   addBrowserOptions(command);
   addOutputOptions(command);
 
-  command.action(async (query: string, options: SearchCommandOptions) => {
+  command.action(async (query: string, rawOptions: SearchCommandOptions, cmd) => {
+    const options = await mergeConfigDefaults(rawOptions, cmd);
     const spinner = startSpinner(`Searching ${options.provider} for "${query}"`);
 
     try {

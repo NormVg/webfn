@@ -8,6 +8,24 @@ type OutputDirSource = "cli" | "config" | "default" | "env";
 
 export type WebfnConfig = {
   outputDir?: string;
+  provider?: "google" | "duckduckgo";
+  mdEngine?: "defuddle" | "turndown";
+  timeout?: number;
+  delay?: number;
+  results?: number;
+  waitUntil?: "domcontentloaded" | "networkidle2";
+  engine?: "chrome" | "lightpanda";
+};
+
+const CONFIG_KEYS: Record<keyof WebfnConfig, "string" | "number"> = {
+  outputDir: "string",
+  provider: "string",
+  mdEngine: "string",
+  timeout: "number",
+  delay: "number",
+  results: "number",
+  waitUntil: "string",
+  engine: "string",
 };
 
 export type ResolvedOutputDirectory = {
@@ -31,11 +49,27 @@ function assertConfigRecord(value: unknown, configPath: string): asserts value i
     throw new Error(`Config file must contain a JSON object: ${configPath}`);
   }
 
-  const record = value as WebfnConfig;
+  const record = value as Record<string, unknown>;
 
-  if (record.outputDir !== undefined && (typeof record.outputDir !== "string" || record.outputDir.trim() === "")) {
-    throw new Error(`Config outputDir must be a non-empty string: ${configPath}`);
+  for (const [key, expectedType] of Object.entries(CONFIG_KEYS)) {
+    const v = record[key];
+    if (v === undefined) continue;
+
+    if (expectedType === "string" && (typeof v !== "string" || v.trim() === "")) {
+      throw new Error(`Config "${key}" must be a non-empty string: ${configPath}`);
+    }
+    if (expectedType === "number" && (typeof v !== "number" || v <= 0)) {
+      throw new Error(`Config "${key}" must be a positive number: ${configPath}`);
+    }
   }
+}
+
+export function isValidConfigKey(key: string): key is keyof WebfnConfig {
+  return key in CONFIG_KEYS;
+}
+
+export function getConfigKeyType(key: keyof WebfnConfig): "string" | "number" {
+  return CONFIG_KEYS[key];
 }
 
 export async function loadConfig(configPath?: string) {

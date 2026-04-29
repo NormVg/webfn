@@ -19,6 +19,7 @@ import {
   addMarkdownEngineOption,
   addOutputOptions,
   addWaitUntilOption,
+  mergeConfigDefaults,
   resolveStorageOptions,
   shouldOutputJson,
   toBrowserLaunchOptions,
@@ -59,7 +60,8 @@ export function registerFetchCommand(program: Command) {
   addOutputOptions(command);
   addWaitUntilOption(command);
 
-  command.action(async (url: string, options: FetchCommandOptions) => {
+  command.action(async (url: string, rawOptions: FetchCommandOptions, cmd) => {
+    const options = await mergeConfigDefaults(rawOptions, cmd);
     const spinner = startSpinner(`Fetching ${url}`);
 
     try {

@@ -20,6 +20,7 @@ import {
   addMarkdownEngineOption,
   addOutputOptions,
   addWaitUntilOption,
+  mergeConfigDefaults,
   parsePositiveInteger,
   resolveStorageOptions,
   shouldOutputJson,
@@ -69,7 +70,8 @@ export function registerCrawlCommand(program: Command) {
   addOutputOptions(command);
   addWaitUntilOption(command);
 
-  command.action(async (url: string, options: CrawlCommandOptions) => {
+  command.action(async (url: string, rawOptions: CrawlCommandOptions, cmd) => {
+    const options = await mergeConfigDefaults(rawOptions, cmd);
     const spinner = startSpinner("Preparing crawl");
 
     try {

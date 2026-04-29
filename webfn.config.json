@@ -1,3 +1,9 @@
 {
-  "outputDir": "agent-data"
+  "outputDir": "agent-data",
+  "provider": "google",
+  "mdEngine": "defuddle",
+  "timeout": 30000,
+  "delay": 1200,
+  "results": 5,
+  "waitUntil": "networkidle2"
 }

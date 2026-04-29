@@ -31,16 +31,23 @@ async function writeText(filePath: string, data: string) {
   await writeFile(filePath, data, "utf8");
 }
 
-function getUrlArtifactBase(outputDir: string, url: string, fallbackUrl?: string) {
+/**
+ * Build a clean, human-readable artifact path for a URL.
+ * 
+ * Structure: <outputDir>/sites/<hostname>/<path-slug>.md
+ * Example:   data/sites/www.fool.com/investing-claude-agent-stocks.md
+ */
+function getUrlArtifactPath(outputDir: string, url: string, fallbackUrl?: string) {
   const artifactUrl = resolvePreferredUrl(url, fallbackUrl);
   const parsed = new URL(artifactUrl);
-  const siteDirectory = path.resolve(outputDir, parsed.hostname);
-  const pathSlug = slugify(parsed.pathname === "/" ? "home" : parsed.pathname);
-  const unique = hashText(artifactUrl);
+  const hostname = parsed.hostname;
+  const pathSlug = slugify(parsed.pathname === "/" ? "index" : parsed.pathname);
+  // Short 4-char hash to prevent collisions without being noisy
+  const unique = hashText(artifactUrl).slice(0, 8);
 
   return {
-    siteDirectory,
-    name: `${pathSlug}-${unique}`
+    hostname,
+    slug: `${pathSlug}-${unique}`,
   };
 }
 
@@ -60,13 +67,7 @@ function formatFrontmatter(data: Record<string, unknown>) {
   const lines = ["---"];
 
   for (const [key, value] of Object.entries(data)) {
-    if (value && typeof value === "object" && !Array.isArray(value)) {
-      lines.push(`${key}:`);
-      for (const [nestedKey, nestedValue] of Object.entries(value as Record<string, unknown>)) {
-        lines.push(`  ${nestedKey}: ${formatFrontmatterScalar(nestedValue)}`);
-      }
-      continue;
-    }
+    if (value === null || value === undefined) continue;
 
     lines.push(`${key}: ${formatFrontmatterScalar(value)}`);
   }
@@ -99,15 +100,15 @@ export async function saveSearchArtifacts(
   results: SearchResult[],
   browser: BrowserRunInfo
 ): Promise<SavedFile[]> {
-  const base = path.resolve(outputDir, "search", `${slugify(query)}-${hashText(query)}`);
+  const querySlug = slugify(query);
+  const base = path.resolve(outputDir, "searches", querySlug);
   const filePath = path.join(base, `${provider}.json`);
   await writeJson(filePath, {
-    browser,
-    count: results.length,
-    provider,
     query,
+    provider,
+    count: results.length,
+    savedAt: new Date().toISOString(),
     results,
-    savedAt: new Date().toISOString()
   });
 
   return [{ label: "search-results", path: filePath }];
@@ -130,7 +131,8 @@ export async function saveCollectArtifacts(
     }>;
   }
 ): Promise<SavedFile[]> {
-  const base = path.resolve(outputDir, "search", `${slugify(payload.query)}-${hashText(payload.query)}`);
+  const querySlug = slugify(payload.query);
+  const base = path.resolve(outputDir, "searches", querySlug);
   const filePath = path.join(base, "collect.json");
   await writeJson(filePath, payload);
 
@@ -144,43 +146,43 @@ export async function saveFetchArtifacts(
   options: FetchArtifactOptions = {}
 ): Promise<SavedFile[]> {
   const frontmatter = options.frontmatter ?? true;
-  const base = getUrlArtifactBase(outputDir, snapshot.finalUrl, snapshot.requestedUrl);
-  const artifactDirectory = path.join(base.siteDirectory, "fetch", base.name);
-  const metadataPath = path.join(artifactDirectory, "metadata.json");
-  const htmlPath = path.join(artifactDirectory, "page.html");
-  const markdownPath = path.join(artifactDirectory, "index.md");
-  const { html, ...metadata } = snapshot;
-  const { markdown, ...scrapeMetadata } = scrape;
+  const artifact = getUrlArtifactPath(outputDir, snapshot.finalUrl, snapshot.requestedUrl);
+  const siteDir = path.join(outputDir, "sites", artifact.hostname);
+  const markdownPath = path.join(siteDir, `${artifact.slug}.md`);
   const savedFiles: SavedFile[] = [];
 
   if (frontmatter) {
     await writeText(markdownPath, buildFetchMarkdown(snapshot, scrape));
   } else {
-    await writeText(markdownPath, markdown);
+    await writeText(markdownPath, scrape.markdown);
   }
-  savedFiles.push({ label: "fetch-markdown", path: markdownPath });
+  savedFiles.push({ label: "markdown", path: markdownPath });
 
   if (options.saveJson) {
+    const { html, ...metadata } = snapshot;
+    const { markdown, ...scrapeMetadata } = scrape;
+    const metadataPath = path.join(siteDir, `${artifact.slug}.json`);
     await writeJson(metadataPath, {
       ...metadata,
       htmlBytes: html.length,
       markdownBytes: markdown.length,
       scrape: scrapeMetadata
     });
-    savedFiles.push({ label: "fetch-metadata", path: metadataPath });
+    savedFiles.push({ label: "metadata", path: metadataPath });
   }
 
   if (options.saveHtml) {
-    await writeText(htmlPath, html);
-    savedFiles.push({ label: "fetch-html", path: htmlPath });
+    const htmlPath = path.join(siteDir, `${artifact.slug}.html`);
+    await writeText(htmlPath, snapshot.html);
+    savedFiles.push({ label: "html", path: htmlPath });
   }
 
   return savedFiles;
 }
 
 export async function saveCrawlArtifacts(outputDir: string, result: CrawlResult): Promise<SavedFile[]> {
-  const base = getUrlArtifactBase(outputDir, result.rootUrl);
-  const filePath = path.join(base.siteDirectory, "crawl", `${base.name}.json`);
+  const artifact = getUrlArtifactPath(outputDir, result.rootUrl);
+  const filePath = path.join(outputDir, "crawls", artifact.hostname, `${artifact.slug}.json`);
   await writeJson(filePath, result);
 
   return [{ label: "crawl-report", path: filePath }];

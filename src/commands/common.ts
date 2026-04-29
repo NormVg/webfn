@@ -3,7 +3,7 @@ import type { Command } from "commander";
 
 import type { BrowserEngineOption, BrowserLaunchOptions, NavigationWaitUntil } from "../core/browser.js";
 import type { MarkdownEngine } from "../core/types.js";
-import { resolveOutputDirectory } from "../core/config.js";
+import { loadConfig, resolveOutputDirectory, type WebfnConfig } from "../core/config.js";
 
 export type SharedCommandOptions = {
   chrome?: string;
@@ -89,6 +89,57 @@ export function addMarkdownEngineOption(command: Command) {
       .choices(["defuddle", "turndown"] satisfies MarkdownEngine[])
       .default("defuddle")
   );
+}
+
+/**
+ * Load config defaults and merge with CLI-provided options.
+ * CLI flags always take priority over config values.
+ */
+export async function mergeConfigDefaults<T extends SharedCommandOptions>(
+  options: T,
+  command: Command
+): Promise<T> {
+  const loaded = await loadConfig(options.config);
+  if (!loaded) return options;
+
+  const cfg = loaded.config;
+  const merged = { ...options };
+
+  // Only apply config defaults for options NOT explicitly provided on the CLI
+  const explicitlySet = (name: string) => {
+    const opt = command.getOptionValueSource(name);
+    return opt === "cli";
+  };
+
+  if (cfg.timeout && !explicitlySet("timeout")) {
+    merged.timeout = cfg.timeout;
+  }
+
+  if (cfg.delay !== undefined && !explicitlySet("delay")) {
+    merged.delay = cfg.delay;
+  }
+
+  if (cfg.engine && !explicitlySet("engine")) {
+    merged.engine = cfg.engine as BrowserEngineOption;
+  }
+
+  if (cfg.waitUntil && !explicitlySet("waitUntil")) {
+    (merged as Record<string, unknown>).waitUntil = cfg.waitUntil;
+  }
+
+  if (cfg.mdEngine && !explicitlySet("mdEngine")) {
+    (merged as Record<string, unknown>).mdEngine = cfg.mdEngine;
+  }
+
+  if (cfg.provider && !explicitlySet("provider")) {
+    (merged as Record<string, unknown>).provider = cfg.provider;
+  }
+
+  if (cfg.results && !explicitlySet("results")) {
+    (merged as Record<string, unknown>).results = cfg.results;
+  }
+
+  return merged;
 }
 
 export function toBrowserLaunchOptions(options: SharedCommandOptions): BrowserLaunchOptions {
