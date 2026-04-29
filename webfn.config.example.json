@@ -1,33 +1,12 @@
 {
-  // Rename this file to webfn.config.json to use it.
-  
-  // Directory where fetched files, screenshots, and metadata will be saved.
   "outputDir": "agent-data",
-  
-  // Search engine to use for queries. Supported: 'google', 'duckduckgo'.
-  "provider": "google",
-  
-  // Markdown parser for converting HTML to Markdown. Supported: 'defuddle', 'turndown'.
-  "mdEngine": "defuddle",
-  
-  // Maximum time in milliseconds to wait for page navigation and fetching.
+  "provider": "google | duckduckgo",
+  "mdEngine": "defuddle | turndown",
   "timeout": 30000,
-  
-  // Time in milliseconds to wait AFTER the page has loaded before capturing content/screenshot.
   "delay": 1200,
-  
-  // Default number of search results to fetch and collect.
   "results": 5,
-  
-  // Puppeteer wait condition for page loads. Supported: 'networkidle2', 'domcontentloaded'.
-  "waitUntil": "networkidle2",
-  
-  // Browser execution engine. Supported: 'chrome' (local headless), 'lightpanda' (local fast engine), 'cloudflare' (remote serverless edge rendering).
-  "engine": "chrome",
-  
-  // Your Cloudflare Account ID. Required ONLY if engine is set to 'cloudflare'. (It is safer to set this in your .env file).
+  "waitUntil": "networkidle2 | domcontentloaded",
+  "engine": "chrome | lightpanda | cloudflare",
   "cloudflareAccountId": "your_cloudflare_account_id_here",
-  
-  // Your Cloudflare API Token. Required ONLY if engine is set to 'cloudflare'. (It is safer to set this in your .env file).
   "cloudflareApiToken": "your_cloudflare_api_token_here"
 }
