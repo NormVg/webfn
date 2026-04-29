@@ -75,6 +75,42 @@ npx webfn-cli screenshot https://example.com --full
 
 ---
 
+## Prerequisites
+
+Webfn works out of the box with Chrome/Chromium (auto-detected). For the best experience, you should also set up **Lightpanda** — a fast, lightweight headless browser that webfn uses by default.
+
+### Lightpanda (Recommended)
+
+Lightpanda is the default headless engine for `search`, `fetch`, and `crawl` commands. Without it, webfn falls back to your local Chrome installation.
+
+**Install Lightpanda:**
+
+```bash
+# macOS (via Homebrew)
+brew install lightpanda-io/tap/lightpanda
+
+# Or download the binary directly from:
+# https://github.com/lightpanda-io/browser/releases
+```
+
+After installing, verify it works:
+
+```bash
+webfn doctor
+```
+
+> If you skip Lightpanda, all commands still work — webfn will automatically fall back to your local Chrome. Use `--engine chrome` to always force Chrome.
+
+### Chrome / Chromium
+
+Make sure Google Chrome or Chromium is installed. Webfn will auto-detect it. You can also point to a custom binary:
+
+```bash
+webfn fetch https://example.com --chrome /path/to/chrome
+```
+
+---
+
 ## Getting Started
 
 Ensure you have [Node.js](https://nodejs.org/) installed, then:
