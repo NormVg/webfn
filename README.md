@@ -47,6 +47,34 @@ graph TD
     J --> M[(Local Storage / JSON stdout)]
 ```
 
+---
+
+## Installation
+
+```bash
+# Install globally via npm
+npm install -g webfn-cli
+
+# Or via pnpm
+pnpm add -g webfn-cli
+```
+
+Once installed, the `webfn` command is available globally:
+
+```bash
+webfn fetch https://example.com
+webfn search "ai agents"
+```
+
+**No install needed with npx:**
+
+```bash
+npx webfn-cli fetch https://example.com
+npx webfn-cli screenshot https://example.com --full
+```
+
+---
+
 ## Getting Started
 
 Ensure you have [Node.js](https://nodejs.org/) installed, then:
