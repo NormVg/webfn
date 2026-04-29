@@ -1,10 +1,24 @@
 {
-  "name": "webfn",
+  "name": "webfn-cli",
   "version": "0.1.0",
   "description": "Agent-oriented CLI for browser-backed search, fetch, crawl, and scrape workflows.",
   "type": "module",
-  "private": true,
   "packageManager": "pnpm@10.28.2",
+  "author": "TheAlphaOnes",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NormVg/webfn.git"
+  },
+  "keywords": [
+    "cli",
+    "scraper",
+    "puppeteer",
+    "lightpanda",
+    "cloudflare",
+    "agent",
+    "ai"
+  ],
   "bin": {
     "webfn": "./dist/cli.js"
   },
