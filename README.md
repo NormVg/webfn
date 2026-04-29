@@ -111,6 +111,19 @@ pnpm dev doctor
 
 Webfn is built to be controlled by LLMs and Agents.
 
+### Official Agent Skill
+
+If you use an agent that supports the [Skills CLI](https://skills.sh) (like Claude Code, Cursor, Antigravity, or Trae), you can install the official `webfn` skill. This automatically provides your agent with full context on how to use the CLI efficiently, bypassing bot protections and extracting clean data.
+
+```bash
+# Install the webfn skill for your AI agent
+npx skills add NormVg/webfn@webfn
+```
+
+Once installed, simply ask your agent to "look something up", "fetch a webpage", or "do research", and it will autonomously invoke `webfn`.
+
+### Piped Outputs
+
 When stdout is **piped** (e.g., an AI agent calling the CLI), webfn automatically suppresses all progress bars and interactive UI, outputting a single, strictly formatted JSON envelope.
 
 ```bash
