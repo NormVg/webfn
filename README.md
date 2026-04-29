@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./banner.svg" alt="Webfn Banner" width="100%">
+<img src="./.github/banner.png" alt="Webfn Banner" width="100%">
 
   <p><b>Agent-oriented CLI for browser-backed search, fetch, and crawl workflows.</b></p>
 
