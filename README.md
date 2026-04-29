@@ -27,25 +27,12 @@ Whether you need to bypass anti-bot protections, extract clean markdown from hea
 
 ## Architecture
 
-```mermaid
-graph TD
-    A[CLI User / AI Agent] -->|Executes Command| B(CLI Router)
+<div align="center">
 
-    B -->|Search| C{Search Engine}
-    C -->|Provider| D[Google]
-    C -->|Provider| E[DuckDuckGo]
+<img src="./.github/flow.svg" alt="Webfn Banner" width="100%">
 
-    B -->|Fetch/Screenshot| F{Execution Engine}
-    F -->|Local UI| G[Puppeteer + Chrome]
-    F -->|Local Headless| H[Lightpanda]
-    F -->|Serverless Edge| I[Cloudflare Rendering API]
 
-    F --> J{Markdown Extraction}
-    J -->|Strict Extract| K[Defuddle Engine]
-    J -->|Literal Extract| L[Turndown Engine]
-
-    J --> M[(Local Storage / JSON stdout)]
-```
+</div>
 
 ---
 
