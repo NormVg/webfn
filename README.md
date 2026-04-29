@@ -117,7 +117,7 @@ If you use an agent that supports the [Skills CLI](https://skills.sh) (like Clau
 
 ```bash
 # Install the webfn skill for your AI agent
-npx skills add NormVg/webfn@webfn
+npx skills add NormVg/webfn
 ```
 
 Once installed, simply ask your agent to "look something up", "fetch a webpage", or "do research", and it will autonomously invoke `webfn`.
