@@ -9,15 +9,17 @@ import { withBrowserSession } from "../core/browser.js";
 import { slugify } from "../lib/text.js";
 import { canonicalizeUrl } from "../lib/url.js";
 import { startSpinner } from "../lib/ui.js";
+import type { BrowserEngineOption } from "../core/browser.js";
 
 type ScreenshotCommandOptions = {
   chrome?: string;
   config?: string;
   delay: number;
-  engine?: string;
+  engine?: BrowserEngineOption;
   headed: boolean;
   lpPort: number;
   outputDir?: string;
+  save: boolean;
   timeout: number;
   userAgent?: string;
   waitUntil: string;
@@ -45,7 +47,10 @@ export function registerScreenshotCommand(program: Command) {
           browserOptions.engine = config.engine;
         }
 
-        const outDirResolve = await resolveOutputDirectory({ configPath: options.config, outputDir: options.outputDir });
+        const outDirResolve = await resolveOutputDirectory({
+          ...(options.config ? { configPath: options.config } : {}),
+          ...(options.outputDir ? { outputDir: options.outputDir } : {}),
+        });
         const outDir = path.join(outDirResolve.path, "screenshots");
         await fs.mkdir(outDir, { recursive: true });
 
