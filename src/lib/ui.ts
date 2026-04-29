@@ -8,8 +8,6 @@ import type { SavedFile } from "../core/storage.js";
 
 const isTTY = Boolean(process.stdout.isTTY);
 
-import path from "node:path";
-
 export function isInteractive() {
   return isTTY;
 }
