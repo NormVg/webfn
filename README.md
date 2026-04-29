@@ -72,13 +72,8 @@ Lightpanda is the default headless engine for `search`, `fetch`, and `crawl` com
 
 **Install Lightpanda:**
 
-```bash
-# macOS (via Homebrew)
-brew install lightpanda-io/tap/lightpanda
-
-# Or download the binary directly from:
-# https://github.com/lightpanda-io/browser/releases
-```
+Please refer to the official docs for installation instructions:  
+**[https://lightpanda.io/docs/open-source/installation](https://lightpanda.io/docs/open-source/installation)**
 
 After installing, verify it works:
 
