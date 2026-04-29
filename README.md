@@ -1,15 +1,9 @@
 <div align="center">
 
-```text
- _       __     __    ______
-| |     / /__  / /_  / ____/___
-| | /| / / _ \/ __ \/ /_  / __ \
-| |/ |/ /  __/ /_/ / __/ / / / /
-|__/|__/\___/_.___/_/   /_/ /_/
-```
+<img src="./banner.svg" alt="Webfn Banner" width="100%">
 
   <p><b>Agent-oriented CLI for browser-backed search, fetch, and crawl workflows.</b></p>
-  
+
   <p>
     <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-18+-success" alt="Node Version"></a>
     <a href="#license"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
@@ -21,7 +15,7 @@
 
 ## Overview
 
-Webfn is the ultimate web data extraction tool designed specifically for **AI Agents** and **Automated Pipelines**. 
+Webfn is the ultimate web data extraction tool designed specifically for **AI Agents** and **Automated Pipelines**.
 
 Whether you need to bypass anti-bot protections, extract clean markdown from heavily javascript-rendered pages, or perform deep site crawls, Webfn provides a seamless and robust interface.
 
@@ -36,20 +30,20 @@ Whether you need to bypass anti-bot protections, extract clean markdown from hea
 ```mermaid
 graph TD
     A[CLI User / AI Agent] -->|Executes Command| B(CLI Router)
-    
+
     B -->|Search| C{Search Engine}
     C -->|Provider| D[Google]
     C -->|Provider| E[DuckDuckGo]
-    
+
     B -->|Fetch/Screenshot| F{Execution Engine}
     F -->|Local UI| G[Puppeteer + Chrome]
     F -->|Local Headless| H[Lightpanda]
     F -->|Serverless Edge| I[Cloudflare Rendering API]
-    
+
     F --> J{Markdown Extraction}
     J -->|Strict Extract| K[Defuddle Engine]
     J -->|Literal Extract| L[Turndown Engine]
-    
+
     J --> M[(Local Storage / JSON stdout)]
 ```
 
@@ -128,7 +122,7 @@ Webfn leverages powerful open-source libraries:
 
 ## Contributing
 
-Contributions are always welcome! 
+Contributions are always welcome!
 
 1. Fork the repository.
 2. Create a new branch (`git checkout -b feature/amazing-feature`).
