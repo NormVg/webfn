@@ -1,3 +1,12 @@
 {
-  "outputDir": "agent-data"
+  "outputDir": "agent-data",
+  "provider": "google",
+  "mdEngine": "defuddle",
+  "timeout": 30000,
+  "delay": 1200,
+  "results": 5,
+  "waitUntil": "networkidle2",
+  "engine": "chrome",
+  "cloudflareAccountId": "your_cloudflare_account_id_here",
+  "cloudflareApiToken": "your_cloudflare_api_token_here"
 }
