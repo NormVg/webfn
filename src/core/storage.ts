@@ -12,11 +12,8 @@ export type SavedFile = {
 };
 
 type FetchArtifactOptions = {
+  frontmatter?: boolean;
   saveHtml?: boolean;
-  saveJson?: boolean;
-};
-
-type ScrapeArtifactOptions = {
   saveJson?: boolean;
 };
 
@@ -88,19 +85,8 @@ function buildFetchMarkdown(
     site: scrape.site,
     author: scrape.author,
     published: scrape.published,
-    requestedUrl: snapshot.requestedUrl,
-    finalUrl: snapshot.finalUrl,
-    canonicalUrl: snapshot.canonicalUrl,
-    status: snapshot.status,
-    fetchedAt: snapshot.fetchedAt,
-    browser: snapshot.browser,
-    markdownEngine: scrape.markdownEngine,
-    htmlBytes: snapshot.html.length,
-    markdownBytes: scrape.markdown.length,
-    wordCount: scrape.wordCount,
-    headings: snapshot.headings.length,
-    links: snapshot.links.length,
-    media: snapshot.media.length
+    url: snapshot.canonicalUrl || snapshot.finalUrl || snapshot.requestedUrl,
+    fetchedAt: snapshot.fetchedAt
   };
 
   return `${formatFrontmatter(metadata)}${scrape.markdown.trim()}\n`;
@@ -157,6 +143,7 @@ export async function saveFetchArtifacts(
   scrape: Pick<ScrapeResult, "author" | "markdown" | "markdownEngine" | "published" | "site" | "title" | "wordCount">,
   options: FetchArtifactOptions = {}
 ): Promise<SavedFile[]> {
+  const frontmatter = options.frontmatter ?? true;
   const base = getUrlArtifactBase(outputDir, snapshot.finalUrl, snapshot.requestedUrl);
   const artifactDirectory = path.join(base.siteDirectory, "fetch", base.name);
   const metadataPath = path.join(artifactDirectory, "metadata.json");
@@ -166,7 +153,11 @@ export async function saveFetchArtifacts(
   const { markdown, ...scrapeMetadata } = scrape;
   const savedFiles: SavedFile[] = [];
 
-  await writeText(markdownPath, buildFetchMarkdown(snapshot, scrape));
+  if (frontmatter) {
+    await writeText(markdownPath, buildFetchMarkdown(snapshot, scrape));
+  } else {
+    await writeText(markdownPath, markdown);
+  }
   savedFiles.push({ label: "fetch-markdown", path: markdownPath });
 
   if (options.saveJson) {
@@ -182,32 +173,6 @@ export async function saveFetchArtifacts(
   if (options.saveHtml) {
     await writeText(htmlPath, html);
     savedFiles.push({ label: "fetch-html", path: htmlPath });
-  }
-
-  return savedFiles;
-}
-
-export async function saveScrapeArtifacts(
-  outputDir: string,
-  scrape: ScrapeResult,
-  options: ScrapeArtifactOptions = {}
-): Promise<SavedFile[]> {
-  const base = getUrlArtifactBase(outputDir, scrape.finalUrl, scrape.requestedUrl);
-  const scrapeDirectory = path.join(base.siteDirectory, "scrape");
-  const metadataPath = path.join(scrapeDirectory, `${base.name}.json`);
-  const markdownPath = path.join(scrapeDirectory, `${base.name}.md`);
-  const { markdown, ...metadata } = scrape;
-  const savedFiles: SavedFile[] = [];
-
-  await writeText(markdownPath, markdown);
-  savedFiles.push({ label: "scrape-markdown", path: markdownPath });
-
-  if (options.saveJson) {
-    await writeJson(metadataPath, {
-      ...metadata,
-      markdownBytes: markdown.length
-    });
-    savedFiles.push({ label: "scrape-metadata", path: metadataPath });
   }
 
   return savedFiles;

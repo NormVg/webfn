@@ -148,7 +148,7 @@ async function closePageContext(page: Page | null, context: BrowserContext | nul
 function stopLightpandaProcess(proc: ChildProcessWithoutNullStreams) {
   proc.stdout.destroy();
   proc.stderr.destroy();
-  proc.kill();
+  proc.kill("SIGKILL");
 }
 
 async function createChromeSession(options: BrowserLaunchOptions): Promise<BrowserSession> {
@@ -202,10 +202,13 @@ async function createLightpandaSession(options: BrowserLaunchOptions): Promise<B
   let page: Page | null = null;
 
   try {
-    browser = await puppeteer.connect({
-      browserWSEndpoint: `ws://${host}:${port}`,
-      defaultViewport: { height: 960, width: 1440 }
-    });
+    browser = await Promise.race([
+      puppeteer.connect({
+        browserWSEndpoint: `ws://${host}:${port}`,
+        defaultViewport: { height: 960, width: 1440 }
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout connecting to Lightpanda")), 10000))
+    ]);
     context = await browser.createBrowserContext();
     page = await context.newPage();
     await configurePage(page, options);

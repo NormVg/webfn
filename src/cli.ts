@@ -11,17 +11,20 @@ async function main() {
 
   program
     .name("webfn")
-    .description("Agent-oriented CLI for search, fetch, crawl, and scrape workflows")
+    .description("Agent-oriented CLI for search, fetch, and crawl workflows")
     .version("0.1.0");
+
   program.showHelpAfterError();
+
   program.configureHelp({
     subcommandTerm(command) {
-      return chalk.cyan(command.name()) + chalk.dim(command.usage() ? ` ${command.usage()}` : "");
-    }
+      return chalk.hex("#8B5CF6")(command.name()) + chalk.dim(command.usage() ? ` ${command.usage()}` : "");
+    },
   });
+
   program.addHelpText(
     "beforeAll",
-    `${renderRootIntro()}${chalk.dim("Examples:")}\n  webfn search "openai agents"\n  webfn fetch https://example.com\n  webfn scrape https://example.com --markdown-engine turndown\n\n`
+    `${renderRootIntro()}${chalk.dim("Examples:")}\n  webfn search "openai agents"\n  webfn fetch https://example.com\n  webfn fetch https://example.com --stdout --no-frontmatter\n\n`
   );
 
   registerCommands(program);
@@ -36,6 +39,6 @@ async function main() {
 
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(message);
+  console.error(chalk.red(`\n✖ ${message}`));
   process.exitCode = 1;
 });

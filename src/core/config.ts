@@ -38,7 +38,7 @@ function assertConfigRecord(value: unknown, configPath: string): asserts value i
   }
 }
 
-async function loadConfig(configPath?: string) {
+export async function loadConfig(configPath?: string) {
   const resolvedPath = path.resolve(configPath ?? DEFAULT_CONFIG_FILE);
   const explicit = Boolean(configPath);
 
@@ -58,6 +58,13 @@ async function loadConfig(configPath?: string) {
     config: parsed,
     path: resolvedPath
   };
+}
+
+export async function writeConfig(config: WebfnConfig, configPath?: string) {
+  const { writeFile } = await import("node:fs/promises");
+  const resolvedPath = path.resolve(configPath ?? DEFAULT_CONFIG_FILE);
+  await writeFile(resolvedPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+  return resolvedPath;
 }
 
 function resolveDirectory(raw: string, source: OutputDirSource, baseDir: string, configPath?: string): ResolvedOutputDirectory {

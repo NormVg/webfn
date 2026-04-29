@@ -1,23 +1,23 @@
 # webfn
 
 ```
- __     __     ______     ______     ______   __   __
-/\ \  _ \ \   /\  ___\   /\  == \   /\  ___\ /\ "-.\ \
-\ \ \/ ".\ \  \ \  __\   \ \  __<   \ \  __\ \ \ \-.  \
- \ \__/".~\_\  \ \_____\  \ \_____\  \ \_\    \ \_\\"\_\
-  \/_/   \/_/   \/_____/   \/_____/   \/_/     \/_/ \/_/
+ _       __     __    ______
+| |     / /__  / /_  / ____/___
+| | /| / / _ \/ __ \/ /_  / __ \
+| |/ |/ /  __/ /_/ / __/ / / / /
+|__/|__/\___/_.___/_/   /_/ /_/
+                                
 ```
 
-Agent-oriented CLI for browser-backed search, fetch, crawl, and scrape workflows.
+Agent-oriented CLI for browser-backed search, fetch, and crawl workflows.
 
-Running `webfn` with no arguments shows this banner, the root help, and a few quick examples.
+Running `webfn` with no arguments shows the banner, root help, and examples.
 
-- search the web
-- fetch rendered pages
+- search the web and extract structured results
+- fetch rendered pages and extract readable markdown
 - crawl sites from sitemaps or internal links
-- scrape readable markdown
 - store artifacts on disk
-- show live status and progress in interactive terminals
+- auto-detect agent mode — outputs JSON when piped, rich output in TTY
 
 ## Structure
 
@@ -32,7 +32,6 @@ Running `webfn` with no arguments shows this banner, the root help, and a few qu
 │   │   ├── doctor.ts
 │   │   ├── fetch.ts
 │   │   ├── index.ts
-│   │   ├── scrape.ts
 │   │   └── search.ts
 │   ├── core
 │   │   ├── browser.ts
@@ -63,6 +62,34 @@ Running `webfn` with no arguments shows this banner, the root help, and a few qu
 - `src/lib/` contains small reusable helpers.
 - Output directory is configurable with CLI flags, env, or `webfn.config.json`.
 
+## Agent-First Design
+
+When stdout is **piped** (e.g. an AI agent calling the CLI), webfn automatically outputs structured JSON. When stdout is a **TTY** (human terminal), it renders rich formatted output with progress bars and tables.
+
+```bash
+# Agent mode (auto-detected):
+webfn fetch https://example.com | jq .page.title
+
+# Force JSON in a TTY:
+webfn fetch https://example.com --json
+
+# Human-friendly output (default in terminal):
+webfn fetch https://example.com
+```
+
+All JSON output follows a consistent envelope:
+
+```json
+{
+  "ok": true,
+  "command": "fetch",
+  "page": { ... },
+  "browser": { ... },
+  "files": [ ... ],
+  "storage": { ... }
+}
+```
+
 ## Commands
 
 ```bash
@@ -70,20 +97,39 @@ webfn search "ai agents"
 webfn collect "ai agents"
 webfn fetch https://example.com
 webfn crawl https://example.com --depth 2 --max-pages 50
-webfn scrape https://example.com --stdout
+webfn fetch https://example.com --stdout --no-frontmatter
 webfn doctor
 ```
 
-Useful dev equivalents:
+Dev equivalents:
 
 ```bash
 pnpm dev search "ai agents"
 pnpm dev collect "ai agents" --results 3
 pnpm dev fetch https://example.com
 pnpm dev crawl https://example.com --mode sitemap --fetch-pages
-pnpm dev scrape https://example.com --json
+pnpm dev fetch https://example.com --stdout --no-frontmatter
 pnpm dev doctor --json
 ```
+
+## Common Options
+
+These options are shared across most commands:
+
+| Flag | Description | Default |
+|:---|:---|:---|
+| `--headed` | Visible Chrome window | headless |
+| `--engine <e>` | `chrome` or `lightpanda` | auto |
+| `--chrome <path>` | Chrome executable path | auto-detect |
+| `--timeout <ms>` | Navigation timeout | `30000` |
+| `--delay <ms>` | Post-load wait time | `1200` |
+| `--user-agent <ua>` | Custom user agent | built-in |
+| `--lp-port <port>` | Lightpanda CDP port | `9222` |
+| `--md-engine <e>` | `defuddle` or `turndown` | `defuddle` |
+| `-o, --output-dir <dir>` | Output directory | config/`data` |
+| `--config <path>` | Config file path | auto-detect |
+| `--no-save` | Skip file output | save enabled |
+| `--json` | Force JSON output | auto (TTY) |
 
 ## Browser Modes
 
@@ -104,8 +150,8 @@ pnpm dev search "openai agents" --provider duckduckgo
 pnpm dev collect "openai agents" --provider google --results 3
 pnpm dev crawl https://example.com --mode links --fetch-pages --max-pages 10
 pnpm dev fetch https://example.com --headed
-pnpm dev scrape https://example.com --engine chrome --stdout
-pnpm dev scrape https://example.com --markdown-engine turndown
+pnpm dev fetch https://example.com --engine chrome --stdout --no-frontmatter
+pnpm dev fetch https://example.com --md-engine turndown
 ```
 
 ## Output Layout
@@ -124,36 +170,29 @@ Artifacts are written to the configured output directory. The built-in fallback 
     fetch/
       home-<hash>/
         index.md
-    scrape/
-      home-<hash>.md
 ```
 
-Use `--no-store` if you only want stdout output.
+Use `--no-save` if you only want stdout/JSON output.
 
-`fetch` saves only Markdown by default. The Markdown file includes metadata at the top. Use `--save-html` or `--save-json` when you also want rendered HTML or metadata JSON:
+`fetch` saves Markdown with metadata at the top by default. Use `--no-frontmatter` to disable it. Use `--html` or `--meta` when you also want rendered HTML or metadata JSON:
 
 ```bash
-pnpm dev fetch https://example.com --save-html --save-json
+pnpm dev fetch https://example.com --html --meta
+pnpm dev fetch https://example.com --no-frontmatter
 ```
 
-`scrape` also saves only Markdown by default. Use `--save-json` when you also want the structured scrape JSON file:
+`fetch` supports both markdown engines:
 
 ```bash
-pnpm dev scrape https://example.com --save-json
-```
-
-`fetch` and `scrape` support both markdown engines:
-
-```bash
-pnpm dev fetch https://example.com --markdown-engine defuddle
-pnpm dev scrape https://example.com --markdown-engine turndown
+pnpm dev fetch https://example.com --md-engine defuddle
+pnpm dev fetch https://example.com --md-engine turndown
 ```
 
 `crawl` can optionally save full fetched page artifacts for each crawled URL:
 
 ```bash
 pnpm dev crawl https://example.com --fetch-pages
-pnpm dev crawl https://example.com --fetch-pages --save-html --save-json
+pnpm dev crawl https://example.com --fetch-pages --html --meta
 ```
 
 ## Configuration
@@ -214,6 +253,6 @@ pnpm dev fetch https://example.com --chrome /path/to/chrome
 - `collect` saves the search result set, fetches each result page, and writes a collection report.
 - `crawl --fetch-pages` saves fetched page artifacts for every crawled page.
 - Sitemap crawling is attempted before internal-link crawling when `--mode auto`.
-- `fetch` stores Markdown by default and can optionally store metadata JSON and rendered HTML.
-- `scrape` stores Markdown by default and can optionally store metadata JSON.
-- `defuddle` is the default markdown engine; `turndown` is available as an alternative for `fetch` and `scrape`.
+- `fetch` stores Markdown with frontmatter by default and can optionally store metadata JSON and rendered HTML. Disable frontmatter with `--no-frontmatter`.
+- `defuddle` is the default markdown engine; `turndown` is available as an alternative.
+- Output is automatically JSON when stdout is piped (agent-friendly). Use `--json` to force JSON in a TTY.

@@ -8,13 +8,14 @@ import { resolveOutputDirectory } from "../core/config.js";
 export type SharedCommandOptions = {
   chrome?: string;
   config?: string;
-  delayMs: number;
+  delay: number;
   engine?: BrowserEngineOption;
   headed?: boolean;
-  lightpandaPort: number;
+  json?: boolean;
+  lpPort: number;
   outputDir?: string;
-  store: boolean;
-  timeoutMs: number;
+  save: boolean;
+  timeout: number;
   userAgent?: string;
 };
 
@@ -42,24 +43,22 @@ export function addBrowserOptions(command: Command) {
   return command
     .option("--headed", "Run with a visible Chrome/Chromium window")
     .addOption(
-      new Option(
-        "--engine <engine>",
-        "Browser engine override. By default headless uses Lightpanda and headed uses Chrome."
-      )
+      new Option("--engine <engine>", "Browser engine")
         .choices(["chrome", "lightpanda"] satisfies BrowserEngineOption[])
     )
-    .option("--chrome <path>", "Path to a Chrome/Chromium executable")
-    .option("--timeout-ms <ms>", "Navigation timeout in milliseconds", parsePositiveInteger, 30_000)
-    .option("--delay-ms <ms>", "Extra wait time after page load in milliseconds", parseNonNegativeInteger, 1_200)
-    .option("--user-agent <ua>", "Override the default user agent")
-    .option("--lightpanda-port <port>", "CDP port used when engine=lightpanda", parsePositiveInteger, 9_222);
+    .option("--chrome <path>", "Path to Chrome/Chromium executable")
+    .option("--timeout <ms>", "Navigation timeout in ms", parsePositiveInteger, 30_000)
+    .option("--delay <ms>", "Post-load wait time in ms", parseNonNegativeInteger, 1_200)
+    .option("--user-agent <ua>", "Custom user agent string")
+    .option("--lp-port <port>", "Lightpanda CDP port", parsePositiveInteger, 9_222);
 }
 
-export function addStorageOptions(command: Command) {
+export function addOutputOptions(command: Command) {
   return command
-    .option("--config <path>", "Path to a webfn config JSON file")
-    .option("-o, --output-dir <dir>", "Directory used for saved artifacts")
-    .option("--no-store", "Skip writing files and print only to stdout");
+    .option("--config <path>", "Path to webfn config file")
+    .option("-o, --output-dir <dir>", "Output directory for artifacts")
+    .option("--no-save", "Skip writing files to disk")
+    .option("--json", "Force JSON output");
 }
 
 export async function resolveStorageOptions(options: SharedCommandOptions) {
@@ -86,7 +85,7 @@ export function addWaitUntilOption(command: Command) {
 
 export function addMarkdownEngineOption(command: Command) {
   return command.addOption(
-    new Option("--markdown-engine <engine>", "Markdown extraction engine")
+    new Option("--md-engine <engine>", "Markdown extraction engine")
       .choices(["defuddle", "turndown"] satisfies MarkdownEngine[])
       .default("defuddle")
   );
@@ -94,10 +93,10 @@ export function addMarkdownEngineOption(command: Command) {
 
 export function toBrowserLaunchOptions(options: SharedCommandOptions): BrowserLaunchOptions {
   const launchOptions: BrowserLaunchOptions = {
-    delayMs: options.delayMs,
+    delayMs: options.delay,
     headless: !options.headed,
-    lightpandaPort: options.lightpandaPort,
-    timeoutMs: options.timeoutMs
+    lightpandaPort: options.lpPort,
+    timeoutMs: options.timeout,
   };
 
   if (options.engine) {
@@ -113,4 +112,8 @@ export function toBrowserLaunchOptions(options: SharedCommandOptions): BrowserLa
   }
 
   return launchOptions;
+}
+
+export function shouldOutputJson(options: SharedCommandOptions) {
+  return options.json === true || !process.stdout.isTTY;
 }
