@@ -29,7 +29,7 @@ Whether you need to bypass anti-bot protections, extract clean markdown from hea
 
 <div align="center">
 
-<img src="./.github/flow.svg" alt="Webfn Banner" width="100%">
+<img src="./.github/flowv2.svg" alt="Webfn Banner" width="100%">
 
 
 </div>
