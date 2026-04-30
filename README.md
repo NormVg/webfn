@@ -44,7 +44,7 @@ Webfn supports both Chrome and Lightpanda engines out of the box. End-to-end fet
 | :--- | :--- | :--- |
 | **Chrome** | `2630ms` | Baseline |
 | **Lightpanda** | `2537ms` | **1.04x faster** |
-| **Cloudflare** | `5114ms` | Edge Rendering |
+
 
 **Official Engine Benchmarks (Raw Execution):**
 - **Memory Footprint:** Lightpanda uses **9x less** memory than Chrome.
@@ -88,7 +88,7 @@ Lightpanda is the default headless engine for `search`, `fetch`, and `crawl` com
 
 **Install Lightpanda:**
 
-Please refer to the official docs for installation instructions:  
+Please refer to the official docs for installation instructions:
 **[https://lightpanda.io/docs/open-source/installation](https://lightpanda.io/docs/open-source/installation)**
 
 After installing, verify it works:
