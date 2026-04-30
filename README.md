@@ -47,7 +47,9 @@ The following benchmark demonstrates the end-to-end execution time of fetching `
 | **Chrome** | `2630ms` | Baseline |
 | **Lightpanda** | `2537ms` | **1.04x faster** |
 
-*(Note: These times include the full Node CLI startup, configuration parsing, CDP websocket connection, and Puppeteer initialization overhead. The raw rendering and memory advantage of Lightpanda is much more prominent in long-lived or parallel `crawl` operations).*
+**Official Engine Benchmarks (Raw Execution):**
+- **Memory Footprint:** Lightpanda uses **9x less** memory than Chrome.
+- **Raw Execution Speed:** Lightpanda is up to **11x faster** than Chrome.
 
 ---
 
