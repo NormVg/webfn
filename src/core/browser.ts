@@ -1,4 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn } from "node:child_process";
+import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 
@@ -72,7 +74,17 @@ export function findChromeExecutable() {
 }
 
 function getLightpandaExecutablePath() {
-  return process.env.LIGHTPANDA_EXECUTABLE_PATH ?? `${homedir()}/.cache/lightpanda-node/lightpanda`;
+  if (process.env.LIGHTPANDA_EXECUTABLE_PATH) {
+    return process.env.LIGHTPANDA_EXECUTABLE_PATH;
+  }
+
+  // Prefer the official installer path over the npm-bundled binary
+  const officialPath = `${homedir()}/.local/bin/lightpanda`;
+  if (existsSync(officialPath)) {
+    return officialPath;
+  }
+
+  return `${homedir()}/.cache/lightpanda-node/lightpanda`;
 }
 
 export async function detectLightpandaAvailability() {
@@ -156,6 +168,24 @@ function stopLightpandaProcess(proc: ChildProcessWithoutNullStreams) {
   proc.kill("SIGKILL");
 }
 
+/**
+ * Kill any stale lightpanda processes occupying the target port.
+ * Prevents zombie processes from blocking new sessions.
+ */
+function killStaleProcessesOnPort(port: number) {
+  try {
+    // Only target the process LISTENING on the port, otherwise lsof matches the Node client connection and kills itself!
+    const output = execSync(`lsof -tiTCP:${port} -sTCP:LISTEN`, { encoding: "utf-8" }).trim();
+    if (output) {
+      for (const pid of output.split("\n")) {
+        try { process.kill(Number(pid), "SIGKILL"); } catch { /* already dead */ }
+      }
+    }
+  } catch {
+    // No process on this port — good
+  }
+}
+
 async function createChromeSession(options: BrowserLaunchOptions): Promise<BrowserSession> {
   const executablePath = options.executablePath ?? findChromeExecutable();
 
@@ -201,26 +231,63 @@ async function createLightpandaSession(options: BrowserLaunchOptions): Promise<B
     throw new Error("Lightpanda is not installed.");
   }
 
-  const proc = await lightpanda.serve({ host, port });
+  // Kill any zombie lightpanda from previous runs
+  killStaleProcessesOnPort(port);
+
+  const proc = spawn(executablePath, ["serve", "--host", host, "--port", port.toString()]);
+  let procExited = false;
+  let procError = "";
+  
+  proc.stderr?.on("data", (data: Buffer) => { procError += data.toString(); });
+  proc.on("exit", () => { procExited = true; });
+
+  // Ensure cleanup on unexpected exit (Ctrl+C, crash, etc.)
+  const cleanup = () => { stopLightpandaProcess(proc); };
+  process.on("exit", cleanup);
+  process.on("SIGINT", cleanup);
+  process.on("SIGTERM", cleanup);
+
   let browser: Browser | null = null;
   let context: BrowserContext | null = null;
   let page: Page | null = null;
 
+  const MAX_ATTEMPTS = 15;
+  const RETRY_MS = 200;
+
   try {
-    browser = await Promise.race([
-      puppeteer.connect({
-        browserWSEndpoint: `ws://${host}:${port}`,
-        defaultViewport: { height: 960, width: 1440 }
-      }),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout connecting to Lightpanda")), 10000))
-    ]);
-    context = await browser.createBrowserContext();
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      if (procExited) {
+        throw new Error(`Lightpanda process exited before accepting connections.${procError ? " stderr: " + procError.trim() : ""}`);
+      }
+
+      try {
+        browser = await puppeteer.connect({
+          browserWSEndpoint: `ws://${host}:${port}`,
+          defaultViewport: { height: 960, width: 1440 }
+        });
+        break;
+      } catch {
+        if (attempt === MAX_ATTEMPTS - 1) {
+          throw new Error(`Lightpanda is not responding on port ${port}. It may be incompatible with your Node version.${procError ? " stderr: " + procError.trim() : ""}`);
+        }
+        await sleep(RETRY_MS);
+      }
+    }
+
+    context = await browser!.createBrowserContext();
     page = await context.newPage();
     await configurePage(page, options);
 
+    const removeCleanupListeners = () => {
+      process.removeListener("exit", cleanup);
+      process.removeListener("SIGINT", cleanup);
+      process.removeListener("SIGTERM", cleanup);
+    };
+
     return {
-      browser,
+      browser: browser!,
       close: async () => {
+        removeCleanupListeners();
         await closePageContext(page, context);
         browser?.disconnect();
         stopLightpandaProcess(proc);
@@ -231,6 +298,9 @@ async function createLightpandaSession(options: BrowserLaunchOptions): Promise<B
       runtime: createBrowserRunInfo(options, "lightpanda", executablePath)
     };
   } catch (error: unknown) {
+    process.removeListener("exit", cleanup);
+    process.removeListener("SIGINT", cleanup);
+    process.removeListener("SIGTERM", cleanup);
     await closePageContext(page, context);
     browser?.disconnect();
     stopLightpandaProcess(proc);
@@ -242,7 +312,13 @@ async function createBrowserSession(options: BrowserLaunchOptions): Promise<Brow
   const engine = await resolveBrowserEngine(options);
 
   if (engine === "lightpanda") {
-    return createLightpandaSession(options);
+    try {
+      return await createLightpandaSession(options);
+    } catch (e) {
+      console.error("[DEBUG] Lightpanda session failed:", e);
+      // Lightpanda failed (likely Node version mismatch) — fall back to Chrome
+      return createChromeSession(options);
+    }
   }
 
   return createChromeSession(options);

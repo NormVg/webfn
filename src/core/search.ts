@@ -268,48 +268,47 @@ export async function searchWeb(
       };
     });
   } catch (error: unknown) {
-    if (!isSearchChallengeError(error)) {
-      throw error;
+    let currentError = error;
+
+    // Fallback 1: If Google returned a captcha, try DuckDuckGo first (same browser)
+    if (options.provider === "google" && isSearchChallengeError(currentError)) {
+      try {
+        const response = await searchWeb(browser, query, {
+          ...options,
+          provider: "duckduckgo"
+        });
+
+        return {
+          ...response,
+          browser: {
+            ...response.browser,
+            providerFallback: "google→duckduckgo"
+          } as BrowserRunInfo & { providerFallback: string }
+        };
+      } catch (retryError) {
+        currentError = retryError; // DuckDuckGo also failed, fall through to browser fallback
+      }
     }
 
-    // Fallback 1: retry with Chrome if we were on Lightpanda
-    if (browser.engine === undefined && browser.headless) {
+    // Fallback 2: If the browser crashed OR got captcha'd on DDG, fallback to Chrome
+    const isDefaultOrLightpanda = browser.engine === undefined || browser.engine === "lightpanda";
+    if (isDefaultOrLightpanda && browser.headless) {
       try {
-        const response: SearchWebResponse = await searchWeb({ ...browser, engine: "chrome" }, query, options);
+        const response = await searchWeb({ ...browser, engine: "chrome" }, query, options);
 
         return {
           ...response,
           browser: {
             ...response.browser,
             fallbackFrom: "lightpanda",
-            requestedEngine: "default"
+            requestedEngine: browser.engine ?? "default"
           }
         };
-      } catch (retryError: unknown) {
-        if (!isSearchChallengeError(retryError)) {
-          throw retryError;
-        }
-        // Chrome also got captcha'd — fall through to provider fallback
+      } catch (retryError) {
+        currentError = retryError; // Chrome also failed, throw final error
       }
     }
 
-    // Fallback 2: switch provider (google → duckduckgo)
-    if (options.provider === "google") {
-      const response: SearchWebResponse = await searchWeb(browser, query, {
-        ...options,
-        provider: "duckduckgo"
-      });
-
-      return {
-        ...response,
-        browser: {
-          ...response.browser,
-          fallbackFrom: response.browser.fallbackFrom ?? response.browser.engine,
-          providerFallback: "google→duckduckgo"
-        } as BrowserRunInfo & { providerFallback: string }
-      };
-    }
-
-    throw error;
+    throw currentError;
   }
 }

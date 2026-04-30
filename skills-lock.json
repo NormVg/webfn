@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/skill-creator/SKILL.md",
       "computedHash": "5ea13a6d9f0d4bb694405d79acd00cadec0d21bb138c4dd10fcf3c500cb835c2"
+    },
+    "webfn": {
+      "source": "NormVg/webfn",
+      "sourceType": "github",
+      "skillPath": "skills/webfn/SKILL.md",
+      "computedHash": "afb6eb9a991675537d24110da9b2fda0567c4e7eb006c20996066502e7178dc3"
     }
   }
 }
