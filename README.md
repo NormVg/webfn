@@ -38,9 +38,7 @@ Whether you need to bypass anti-bot protections, extract clean markdown from hea
 
 ## Benchmarks
 
-Webfn supports both Chrome and Lightpanda engines out of the box. Lightpanda is highly recommended for scraping pipelines as it offers significantly lower memory footprints and faster raw execution times.
-
-The following benchmark demonstrates the end-to-end execution time of fetching `news.ycombinator.com` (averaged over 5 runs with `--delay 0`):
+Webfn supports both Chrome and Lightpanda engines out of the box. End-to-end fetch benchmark (`news.ycombinator.com`):
 
 | Engine | Average Time (ms) | Speedup |
 | :--- | :--- | :--- |
